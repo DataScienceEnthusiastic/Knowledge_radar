@@ -1,0 +1,6 @@
+stage,count,pct_of_total,step_loss
+1_Total_Test_Queries,70,100.0,0
+2_Retrieval_Success (Recall@5 > 0),69,98.57,1
+3_Citation_Support,68,97.14,1
+4_Faithfulness (>= 0.70),68,97.14,0
+5_Final_Answer_Correctness (>= 0.70),31,44.29,37

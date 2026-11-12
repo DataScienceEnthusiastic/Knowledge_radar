@@ -1,0 +1,2066 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Knowledge Radar — Intelligence & Real-Time Audit Console</title>
+    <!-- Google Fonts & Marked Markdown Parser -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+
+    <style>
+        :root {
+            --bg-base: #070B14;
+            --bg-surface: #0E1626;
+            --bg-card: rgba(17, 26, 44, 0.75);
+            --bg-elevated: #152238;
+            --border-subtle: rgba(255, 255, 255, 0.08);
+            --border-medium: rgba(255, 255, 255, 0.14);
+            --border-focus: #3B82F6;
+            --accent-primary: #3B82F6;
+            --accent-purple: #8B5CF6;
+            --text-main: #F8FAFC;
+            --text-secondary: #94A3B8;
+            --text-muted: #64748B;
+            --success: #10B981;
+            --success-bg: rgba(16, 185, 129, 0.12);
+            --warning: #F59E0B;
+            --warning-bg: rgba(245, 158, 11, 0.14);
+            --danger: #EF4444;
+            --danger-bg: rgba(239, 68, 68, 0.14);
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* -------------------------------------------------------------
+           SIDEBAR ARCHITECTURE (Clean Tabbed Layout)
+           ------------------------------------------------------------- */
+        .sidebar {
+            width: 380px;
+            background-color: var(--bg-surface);
+            border-right: 1px solid var(--border-subtle);
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+            flex-shrink: 0;
+            z-index: 10;
+        }
+
+        .sidebar-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 1.1rem 1.4rem;
+            border-bottom: 1px solid var(--border-subtle);
+            background: rgba(7, 11, 20, 0.6);
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            font-size: 1.15rem;
+            font-weight: 800;
+            letter-spacing: -0.02em;
+            background: linear-gradient(90deg, #60A5FA 0%, #A78BFA 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .sidebar-status-pill {
+            font-size: 0.72rem;
+            font-weight: 600;
+            padding: 0.2rem 0.55rem;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        /* Sidebar Navigation Tabs */
+        .sidebar-nav-tabs {
+            display: flex;
+            border-bottom: 1px solid var(--border-subtle);
+            background: rgba(10, 16, 29, 0.8);
+            padding: 0.35rem 0.8rem 0 0.8rem;
+            gap: 0.4rem;
+        }
+
+        .sidebar-tab-btn {
+            flex: 1;
+            padding: 0.6rem 0.5rem;
+            background: transparent;
+            border: none;
+            border-bottom: 2px solid transparent;
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.4rem;
+            transition: all 0.2s;
+            border-radius: 6px 6px 0 0;
+        }
+
+        .sidebar-tab-btn:hover {
+            color: var(--text-main);
+            background: rgba(255, 255, 255, 0.03);
+        }
+
+        .sidebar-tab-btn.active {
+            color: var(--accent-primary);
+            border-bottom-color: var(--accent-primary);
+            background: rgba(59, 130, 246, 0.08);
+        }
+
+        .sidebar-scroll-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.2rem;
+        }
+
+        /* Mode Selector Pills in Ingestion Tab */
+        .ingest-mode-pills {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 0.25rem;
+            gap: 0.2rem;
+        }
+
+        .ingest-mode-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 0.45rem 0.2rem;
+            font-size: 0.74rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-radius: 6px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.2rem;
+            transition: all 0.2s;
+        }
+
+        .ingest-mode-btn:hover {
+            color: var(--text-main);
+        }
+
+        .ingest-mode-btn.active {
+            background: var(--accent-primary);
+            color: white;
+            box-shadow: 0 2px 8px rgba(59, 130, 246, 0.35);
+        }
+
+        .ingest-panel {
+            display: none;
+            flex-direction: column;
+            gap: 0.6rem;
+        }
+
+        .ingest-panel.active {
+            display: flex;
+        }
+
+        /* Modern Drag & Drop Zone */
+        .dropzone-box {
+            border: 1.5px dashed var(--border-medium);
+            background: rgba(15, 23, 42, 0.4);
+            border-radius: 10px;
+            padding: 1.2rem 1rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .dropzone-box:hover {
+            border-color: var(--accent-primary);
+            background: rgba(59, 130, 246, 0.05);
+        }
+
+        .dropzone-icon {
+            font-size: 1.6rem;
+        }
+
+        .dropzone-text {
+            font-size: 0.82rem;
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        .dropzone-hint {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+        }
+
+        /* Active Loaded Vault Sources */
+        .vault-inventory {
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+            background: rgba(10, 16, 29, 0.5);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 0.75rem;
+        }
+
+        .vault-inventory-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.72rem;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            color: var(--text-muted);
+            font-weight: 700;
+        }
+
+        .source-card {
+            background: rgba(21, 34, 56, 0.6);
+            border: 1px solid var(--border-subtle);
+            border-radius: 6px;
+            padding: 0.45rem 0.65rem;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.78rem;
+            transition: border-color 0.2s;
+        }
+
+        .source-card:hover {
+            border-color: var(--border-medium);
+        }
+
+        .source-card-title {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+            max-width: 240px;
+        }
+
+        .source-chunk-tag {
+            background: rgba(59, 130, 246, 0.15);
+            color: #93C5FD;
+            border-radius: 4px;
+            padding: 0.1rem 0.4rem;
+            font-size: 0.7rem;
+            font-family: 'JetBrains Mono', monospace;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        /* Tier Selector Segmented Cards */
+        .tier-cards-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 0.4rem;
+        }
+
+        .tier-card-btn {
+            background: rgba(15, 23, 42, 0.6);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 0.65rem 0.4rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            flex-direction: column;
+            gap: 0.2rem;
+        }
+
+        .tier-card-btn:hover {
+            border-color: var(--border-medium);
+        }
+
+        .tier-card-btn.active {
+            border-color: var(--accent-primary);
+            background: rgba(59, 130, 246, 0.12);
+            box-shadow: 0 0 0 1px var(--accent-primary);
+        }
+
+        .tier-name {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .tier-desc {
+            font-size: 0.68rem;
+            color: var(--text-muted);
+        }
+
+        /* Sidebar Footer Controls */
+        .sidebar-footer {
+            padding: 0.9rem 1.2rem;
+            border-top: 1px solid var(--border-subtle);
+            background: rgba(7, 11, 20, 0.9);
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        .sidebar-footer-stats {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.78rem;
+            color: var(--text-secondary);
+        }
+
+        .sidebar-footer-actions {
+            display: flex;
+            gap: 0.4rem;
+        }
+
+        /* Form Inputs & Buttons */
+        .form-group {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .form-label {
+            font-size: 0.78rem;
+            font-weight: 600;
+            color: var(--text-secondary);
+        }
+
+        input[type="text"], input[type="password"], select {
+            background-color: #0B1323;
+            border: 1px solid var(--border-subtle);
+            color: var(--text-main);
+            padding: 0.65rem 0.85rem;
+            border-radius: 8px;
+            font-size: 0.84rem;
+            font-family: inherit;
+            outline: none;
+            transition: all 0.2s;
+            width: 100%;
+        }
+
+        input[type="text"]:focus, input[type="password"]:focus, select:focus {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.45rem;
+            padding: 0.6rem 0.9rem;
+            border-radius: 8px;
+            font-size: 0.84rem;
+            font-weight: 600;
+            cursor: pointer;
+            border: none;
+            transition: all 0.2s;
+            user-select: none;
+        }
+
+        .btn-primary {
+            background: linear-gradient(90deg, #3B82F6 0%, #2563EB 100%);
+            color: white;
+            box-shadow: 0 2px 10px rgba(37, 99, 235, 0.3);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            opacity: 0.95;
+            transform: translateY(-1px);
+        }
+
+        .btn-secondary {
+            background-color: rgba(255, 255, 255, 0.05);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+        }
+
+        .btn-secondary:hover {
+            background-color: rgba(255, 255, 255, 0.1);
+            color: var(--text-main);
+        }
+
+        .btn-danger-ghost {
+            background: transparent;
+            border: 1px solid rgba(239, 68, 68, 0.3);
+            color: #F87171;
+            font-size: 0.75rem;
+            padding: 0.4rem 0.6rem;
+        }
+
+        .btn-danger-ghost:hover {
+            background: rgba(239, 68, 68, 0.15);
+        }
+
+        .btn:disabled {
+            opacity: 0.45;
+            cursor: not-allowed;
+            transform: none !important;
+        }
+
+        /* -------------------------------------------------------------
+           MAIN CHAT CONSOLE
+           ------------------------------------------------------------- */
+        .main-chat-container {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            background-color: var(--bg-base);
+            position: relative;
+            overflow: hidden;
+        }
+
+        /* Top Executive Analytics Ribbon */
+        .top-navbar {
+            padding: 0.75rem 1.8rem;
+            border-bottom: 1px solid var(--border-subtle);
+            background: rgba(14, 22, 38, 0.85);
+            backdrop-filter: blur(12px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            z-index: 5;
+        }
+
+        .navbar-brand-group {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+        }
+
+        .navbar-title {
+            font-size: 0.98rem;
+            font-weight: 700;
+            color: #F8FAFC;
+        }
+
+        .navbar-badge {
+            font-size: 0.72rem;
+            background: rgba(59, 130, 246, 0.15);
+            color: #93C5FD;
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            padding: 0.15rem 0.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+        }
+
+        /* Global Session Telemetry Ribbon */
+        .session-ribbon {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            background: rgba(7, 11, 20, 0.7);
+            border: 1px solid var(--border-subtle);
+            border-radius: 20px;
+            padding: 0.25rem 0.75rem;
+            font-size: 0.76rem;
+        }
+
+        .ribbon-pill {
+            display: flex;
+            align-items: center;
+            gap: 0.3rem;
+            color: var(--text-secondary);
+        }
+
+        .ribbon-pill strong {
+            color: #38BDF8;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        .status-pill {
+            padding: 0.15rem 0.5rem;
+            border-radius: 12px;
+            font-weight: 600;
+            font-size: 0.7rem;
+        }
+
+        .pill-stable {
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+        }
+
+        .pill-warning {
+            background: var(--warning-bg);
+            color: var(--warning);
+            border: 1px solid rgba(245, 158, 11, 0.4);
+        }
+
+        .pill-drift {
+            background: var(--danger-bg);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+        }
+
+        /* Chat Messages List */
+        .chat-messages {
+            flex: 1;
+            overflow-y: auto;
+            padding: 1.5rem 2rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1.5rem;
+            scroll-behavior: smooth;
+        }
+
+        .message-row {
+            display: flex;
+            flex-direction: column;
+            max-width: 920px;
+            width: 100%;
+        }
+
+        .message-row.user {
+            align-self: flex-end;
+            align-items: flex-end;
+        }
+
+        .message-row.assistant {
+            align-self: flex-start;
+            align-items: flex-start;
+        }
+
+        .user-bubble {
+            background: linear-gradient(135deg, #2563EB 0%, #1D4ED8 100%);
+            color: white;
+            padding: 0.85rem 1.25rem;
+            border-radius: 14px 14px 3px 14px;
+            font-size: 0.94rem;
+            line-height: 1.55;
+            max-width: 82%;
+            box-shadow: 0 4px 14px rgba(37, 99, 235, 0.25);
+            word-break: break-word;
+        }
+
+        /* Sleek Unclustered Assistant Card */
+        .assistant-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border-subtle);
+            border-radius: 14px;
+            padding: 1.25rem 1.4rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.9rem;
+            width: 100%;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.35);
+            backdrop-filter: blur(14px);
+            transition: border-color 0.2s;
+        }
+
+        .assistant-card:hover {
+            border-color: var(--border-medium);
+        }
+
+        /* Assistant Meta Strip (Unclustered) */
+        .assistant-meta-strip {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            padding-bottom: 0.75rem;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .meta-strip-left {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            flex-wrap: wrap;
+        }
+
+        .meta-strip-right {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .provider-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+            padding: 0.25rem 0.75rem;
+            border-radius: 16px;
+            font-weight: 600;
+            font-size: 0.76rem;
+        }
+
+        .badge-gemini {
+            background: linear-gradient(135deg, rgba(66, 133, 244, 0.2) 0%, rgba(147, 51, 234, 0.25) 100%);
+            color: #93C5FD;
+            border: 1px solid rgba(147, 51, 234, 0.6);
+        }
+
+        .badge-cloud {
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.4);
+        }
+
+        .badge-ollama {
+            background: var(--warning-bg);
+            color: var(--warning);
+            border: 1px solid rgba(245, 158, 11, 0.4);
+        }
+
+        .badge-offline {
+            background: var(--danger-bg);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.4);
+        }
+
+        .meta-chip {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Toggle Button for Evidence & Telemetry Drawer */
+        .btn-audit-toggle {
+            background: rgba(59, 130, 246, 0.1);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            color: #93C5FD;
+            padding: 0.25rem 0.65rem;
+            border-radius: 6px;
+            font-size: 0.74rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.35rem;
+        }
+
+        .btn-audit-toggle:hover {
+            background: rgba(59, 130, 246, 0.2);
+            color: #BFDBFE;
+        }
+
+        .btn-copy {
+            background: transparent;
+            border: 1px solid var(--border-subtle);
+            color: var(--text-muted);
+            padding: 0.25rem 0.55rem;
+            border-radius: 6px;
+            font-size: 0.72rem;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .btn-copy:hover {
+            color: var(--text-main);
+            border-color: var(--border-medium);
+        }
+
+        /* Markdown Formatting (Executive Prose) */
+        .markdown-body {
+            line-height: 1.65;
+            color: #E2E8F0;
+            font-size: 0.94rem;
+        }
+
+        .markdown-body h3 {
+            color: #38BDF8;
+            margin-top: 1.1rem;
+            margin-bottom: 0.45rem;
+            font-size: 1.05rem;
+            font-weight: 700;
+        }
+
+        .markdown-body ul, .markdown-body ol {
+            padding-left: 1.4rem;
+            margin-bottom: 0.75rem;
+        }
+
+        .markdown-body li {
+            margin-bottom: 0.3rem;
+        }
+
+        .markdown-body code {
+            font-family: 'JetBrains Mono', monospace;
+            background: rgba(255, 255, 255, 0.08);
+            padding: 0.15rem 0.35rem;
+            border-radius: 4px;
+            font-size: 0.84rem;
+            color: #93C5FD;
+        }
+
+        .markdown-body pre {
+            background: #0B1220;
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 0.85rem;
+            overflow-x: auto;
+            margin: 0.8rem 0;
+        }
+
+        .markdown-body pre code {
+            background: transparent;
+            padding: 0;
+            color: #F8FAFC;
+        }
+
+        /* Uncertainty Highlighting Badge */
+        .verification-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            background: rgba(245, 158, 11, 0.2);
+            border: 1px solid #F59E0B;
+            color: #FDE047;
+            padding: 0.1rem 0.45rem;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.78rem;
+            margin: 0 0.15rem;
+            cursor: help;
+        }
+
+        /* Citation Interactive Chips */
+        .citation-chip {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.25rem;
+            background: rgba(59, 130, 246, 0.12);
+            border: 1px solid rgba(59, 130, 246, 0.35);
+            color: #93C5FD;
+            padding: 0.05rem 0.4rem;
+            border-radius: 4px;
+            font-size: 0.76rem;
+            font-weight: 600;
+            cursor: pointer;
+            margin: 0 0.15rem;
+            transition: all 0.2s;
+        }
+
+        .citation-chip:hover {
+            background: rgba(59, 130, 246, 0.25);
+            color: #DBEAFE;
+        }
+
+        /* -------------------------------------------------------------
+           EVIDENCE & TELEMETRY DRAWER (Collapsible Accordion)
+           ------------------------------------------------------------- */
+        .evidence-drawer {
+            border: 1px solid var(--border-subtle);
+            background: #0A101D;
+            border-radius: 10px;
+            overflow: hidden;
+            margin-top: 0.4rem;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-4px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .evidence-tabs-bar {
+            display: flex;
+            border-bottom: 1px solid var(--border-subtle);
+            background: #060B14;
+            overflow-x: auto;
+        }
+
+        .ev-tab-btn {
+            background: transparent;
+            border: none;
+            color: var(--text-secondary);
+            padding: 0.55rem 0.95rem;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+            border-bottom: 2px solid transparent;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .ev-tab-btn:hover {
+            color: var(--text-main);
+        }
+
+        .ev-tab-btn.active {
+            color: var(--accent-primary);
+            border-bottom-color: var(--accent-primary);
+            background: rgba(59, 130, 246, 0.08);
+        }
+
+        .ev-tab-pane {
+            padding: 1rem;
+            display: none;
+            max-height: 320px;
+            overflow-y: auto;
+            font-size: 0.82rem;
+        }
+
+        .ev-tab-pane.active {
+            display: flex;
+            flex-direction: column;
+            gap: 0.75rem;
+        }
+
+        /* Metric Cells in Telemetry Tab */
+        .telemetry-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+            gap: 0.6rem;
+        }
+
+        .telemetry-card {
+            background: rgba(21, 34, 56, 0.5);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 0.65rem 0.8rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.25rem;
+        }
+
+        .telemetry-card-label {
+            font-size: 0.7rem;
+            color: var(--text-muted);
+            text-transform: uppercase;
+            font-weight: 600;
+        }
+
+        .telemetry-card-value {
+            font-size: 1.05rem;
+            font-weight: 700;
+            color: #F8FAFC;
+            font-family: 'JetBrains Mono', monospace;
+        }
+
+        /* Claim Audit Table */
+        .claim-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.78rem;
+        }
+
+        .claim-table th {
+            text-align: left;
+            padding: 0.5rem 0.65rem;
+            color: var(--text-muted);
+            font-weight: 600;
+            border-bottom: 1px solid var(--border-subtle);
+        }
+
+        .claim-table td {
+            padding: 0.5rem 0.65rem;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+            vertical-align: top;
+        }
+
+        .claim-pill {
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+            padding: 0.15rem 0.5rem;
+            border-radius: 4px;
+            font-weight: 600;
+            font-size: 0.7rem;
+            white-space: nowrap;
+        }
+
+        .claim-grounded {
+            background: var(--success-bg);
+            color: var(--success);
+            border: 1px solid rgba(16, 185, 129, 0.3);
+        }
+
+        .claim-unverified {
+            background: var(--warning-bg);
+            color: var(--warning);
+            border: 1px solid rgba(245, 158, 11, 0.4);
+        }
+
+        .claim-low {
+            background: var(--danger-bg);
+            color: var(--danger);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+
+        /* Passages Container */
+        .passage-snippet {
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid var(--border-subtle);
+            border-radius: 8px;
+            padding: 0.75rem 0.9rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            line-height: 1.5;
+        }
+
+        .passage-snippet-title {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            font-size: 0.74rem;
+            color: #38BDF8;
+            font-weight: 600;
+        }
+
+        /* -------------------------------------------------------------
+           CHAT INPUT BAR & ATTACHMENT ACTION
+           ------------------------------------------------------------- */
+        .chat-input-wrapper {
+            padding: 0.9rem 1.8rem 1.2rem 1.8rem;
+            border-top: 1px solid var(--border-subtle);
+            background: rgba(14, 22, 38, 0.9);
+            backdrop-filter: blur(12px);
+            display: flex;
+            flex-direction: column;
+            gap: 0.5rem;
+        }
+
+        /* Prompt Suggestions Chips */
+        .prompt-quick-chips {
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+            overflow-x: auto;
+            padding-bottom: 0.2rem;
+        }
+
+        .quick-chip {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1px solid var(--border-subtle);
+            color: var(--text-secondary);
+            padding: 0.25rem 0.65rem;
+            border-radius: 14px;
+            font-size: 0.74rem;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.2s;
+        }
+
+        .quick-chip:hover {
+            background: rgba(59, 130, 246, 0.12);
+            color: var(--text-main);
+            border-color: rgba(59, 130, 246, 0.3);
+        }
+
+        .input-bar-container {
+            display: flex;
+            align-items: center;
+            background: #0B1323;
+            border: 1px solid var(--border-subtle);
+            border-radius: 12px;
+            padding: 0.3rem 0.4rem 0.3rem 0.9rem;
+            gap: 0.6rem;
+            transition: all 0.2s;
+            box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
+        }
+
+        .input-bar-container:focus-within {
+            border-color: var(--accent-primary);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.25);
+        }
+
+        .chat-text-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-main);
+            font-size: 0.92rem;
+            font-family: inherit;
+            outline: none;
+            padding: 0.45rem 0;
+        }
+
+        .btn-attach {
+            background: transparent;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.1rem;
+            cursor: pointer;
+            padding: 0.35rem;
+            border-radius: 6px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-attach:hover {
+            color: var(--accent-primary);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .btn-send-message {
+            background: linear-gradient(90deg, #3B82F6 0%, #2563EB 100%);
+            color: white;
+            border: none;
+            border-radius: 8px;
+            padding: 0.55rem 0.95rem;
+            font-size: 0.82rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 0.35rem;
+            transition: all 0.2s;
+        }
+
+        .btn-send-message:hover:not(:disabled) {
+            opacity: 0.95;
+            transform: translateY(-1px);
+        }
+
+        .spinner {
+            border: 2px solid rgba(255, 255, 255, 0.15);
+            border-left-color: white;
+            border-radius: 50%;
+            width: 14px;
+            height: 14px;
+            animation: spin 0.8s linear infinite;
+            display: inline-block;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .progress-banner {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            background: rgba(59, 130, 246, 0.12);
+            border: 1px solid rgba(59, 130, 246, 0.3);
+            padding: 0.5rem 0.9rem;
+            border-radius: 8px;
+            font-size: 0.8rem;
+            color: #93C5FD;
+            animation: fadeIn 0.2s ease-out;
+        }
+
+        /* Toast Container */
+        .toast-list {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+
+        .toast-item {
+            font-size: 0.78rem;
+            color: var(--success);
+        }
+    </style>
+</head>
+<body>
+
+    <!-- -------------------------------------------------------------
+         SIDEBAR: TABBED WORKSPACE (Vault vs Model Settings)
+         ------------------------------------------------------------- -->
+    <div class="sidebar">
+        <!-- Sidebar Brand Header -->
+        <div class="sidebar-header">
+            <div class="sidebar-brand">
+                <span>📡</span> Knowledge Radar
+            </div>
+            <div id="ollamaStatusBox" class="sidebar-status-pill status-offline" style="background:var(--warning-bg); color:var(--warning);">
+                <span>🟡</span> Checking...
+            </div>
+        </div>
+
+        <!-- Sidebar Navigation Tabs -->
+        <div class="sidebar-nav-tabs">
+            <button class="sidebar-tab-btn active" id="tabBtnVault" onclick="switchSidebarTab('vault')">
+                <span>📁</span> Document Vault
+            </button>
+            <button class="sidebar-tab-btn" id="tabBtnModel" onclick="switchSidebarTab('model')">
+                <span>⚙️</span> Model & Cloud
+            </button>
+        </div>
+
+        <!-- Scrollable Content Area -->
+        <div class="sidebar-scroll-area">
+
+            <!-- TAB 1: INGESTION VAULT -->
+            <div id="sidebarPaneVault" style="display:flex; flex-direction:column; gap:1.1rem;">
+                
+                <!-- Segmented Ingestion Mode Pills -->
+                <div class="ingest-mode-pills">
+                    <button class="ingest-mode-btn active" id="modeBtnPdf" onclick="switchIngestMode('pdf')">
+                        <span>📄</span> PDF
+                    </button>
+                    <button class="ingest-mode-btn" id="modeBtnImg" onclick="switchIngestMode('img')">
+                        <span>🖼️</span> OCR
+                    </button>
+                    <button class="ingest-mode-btn" id="modeBtnYt" onclick="switchIngestMode('yt')">
+                        <span>🎥</span> YouTube
+                    </button>
+                    <button class="ingest-mode-btn" id="modeBtnWeb" onclick="switchIngestMode('web')">
+                        <span>🌐</span> Web
+                    </button>
+                </div>
+
+                <!-- Mode 1: PDF Dropzone -->
+                <div class="ingest-panel active" id="panelPdf">
+                    <div class="dropzone-box" onclick="document.getElementById('pdfInput').click()">
+                        <div class="dropzone-icon">📄</div>
+                        <div class="dropzone-text" id="pdfLabel">Click or drop PDF here</div>
+                        <div class="dropzone-hint">Supports research papers, reports, financial statements</div>
+                    </div>
+                    <input type="file" id="pdfInput" accept=".pdf" style="display:none;" onchange="updateFileLabel('pdfInput', 'pdfLabel')">
+                </div>
+
+                <!-- Mode 2: Image OCR Dropzone -->
+                <div class="ingest-panel" id="panelImg">
+                    <div class="dropzone-box" onclick="document.getElementById('imgInput').click()">
+                        <div class="dropzone-icon">🖼️</div>
+                        <div class="dropzone-text" id="imgLabel">Click or drop Image here</div>
+                        <div class="dropzone-hint">Extracts text via Tesseract OCR engine</div>
+                    </div>
+                    <input type="file" id="imgInput" accept="image/*" style="display:none;" onchange="updateFileLabel('imgInput', 'imgLabel')">
+                </div>
+
+                <!-- Mode 3: YouTube Video URL -->
+                <div class="ingest-panel" id="panelYt">
+                    <div class="form-group">
+                        <label class="form-label" for="ytInput">YouTube Video URL</label>
+                        <input type="text" id="ytInput" placeholder="https://youtube.com/watch?v=...">
+                    </div>
+                </div>
+
+                <!-- Mode 4: Web URL -->
+                <div class="ingest-panel" id="panelWeb">
+                    <div class="form-group">
+                        <label class="form-label" for="webInput">Article or Webpage URL</label>
+                        <input type="text" id="webInput" placeholder="https://example.com/article">
+                    </div>
+                </div>
+
+                <!-- Ingest Action Button -->
+                <button class="btn btn-primary" id="btnIndex" onclick="indexVaultInputs()">
+                    <span>⚡</span> Ingest & Index Input
+                </button>
+
+                <!-- Feedback Toasts -->
+                <div id="indexToasts" class="toast-list"></div>
+
+                <!-- Loaded Vault Sources Inventory -->
+                <div class="vault-inventory">
+                    <div class="vault-inventory-header">
+                        <span>Loaded Vault Sources</span>
+                        <span id="sourcesCountBadge" style="color:#38BDF8;">0 sources</span>
+                    </div>
+                    <div id="activeSourcesList" style="display:flex; flex-direction:column; gap:0.35rem; max-height:180px; overflow-y:auto;">
+                        <div style="color:var(--text-muted); font-size:0.75rem; font-style:italic; padding:0.2rem 0;">No documents or links indexed yet.</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TAB 2: MODEL & CONFIGURATION -->
+            <div id="sidebarPaneModel" style="display:none; flex-direction:column; gap:1.1rem;">
+                <div class="form-group">
+                    <label class="form-label" for="providerSelect">Primary LLM Provider</label>
+                    <select id="providerSelect" onchange="onProviderChange()">
+                        <option value="Gemini" selected>Google Gemini (Official API)</option>
+                        <option value="OpenRouter">OpenRouter (Multi-Model Hub)</option>
+                        <option value="NVIDIA">NVIDIA NIM API</option>
+                        <option value="Custom">Custom OpenAI API</option>
+                    </select>
+                </div>
+
+                <!-- Gemini Tier Cards Grid -->
+                <div class="form-group" id="geminiTierGroup">
+                    <label class="form-label">Gemini Performance Tier</label>
+                    <div class="tier-cards-grid">
+                        <div class="tier-card-btn" id="tierBtnLow" onclick="selectGeminiTier('low')">
+                            <span class="tier-name">⚡ Low</span>
+                            <span class="tier-desc">Flash-Lite</span>
+                        </div>
+                        <div class="tier-card-btn active" id="tierBtnMedium" onclick="selectGeminiTier('medium')">
+                            <span class="tier-name">⚖️ Med</span>
+                            <span class="tier-desc">Flash 2.0</span>
+                        </div>
+                        <div class="tier-card-btn" id="tierBtnHigh" onclick="selectGeminiTier('high')">
+                            <span class="tier-name">🧠 High</span>
+                            <span class="tier-desc">Pro 1.5/2.0</span>
+                        </div>
+                    </div>
+                    <input type="hidden" id="geminiTierSelect" value="medium">
+                </div>
+
+                <!-- API Key Input -->
+                <div class="form-group">
+                    <label class="form-label" for="apiKeyInput" id="apiKeyLabel">Gemini API Key</label>
+                    <div style="display:flex; gap:0.4rem;">
+                        <input type="password" id="apiKeyInput" placeholder="AIzaSy...">
+                        <button class="btn btn-secondary" style="padding:0.6rem 0.75rem;" onclick="testCloudConnection()" title="Test API Connection">
+                            🔌
+                        </button>
+                    </div>
+                    <div style="font-size:0.7rem; color:var(--text-muted);">Get a free key from Google AI Studio.</div>
+                </div>
+
+                <!-- Collapsible Advanced API Settings -->
+                <div style="border:1px solid var(--border-subtle); border-radius:8px; overflow:hidden;">
+                    <div onclick="toggleAdvancedSettings()" style="padding:0.55rem 0.8rem; background:rgba(15,23,42,0.5); cursor:pointer; font-size:0.76rem; font-weight:600; color:var(--text-secondary); display:flex; justify-content:space-between;">
+                        <span>🛠️ Advanced Endpoint Settings</span>
+                        <span id="advancedArrow">▼</span>
+                    </div>
+                    <div id="advancedSettingsBody" style="display:none; padding:0.8rem; flex-direction:column; gap:0.6rem; background:#0B1220;">
+                        <div class="form-group">
+                            <label class="form-label" for="baseUrlInput">Base URL</label>
+                            <input type="text" id="baseUrlInput" value="https://generativelanguage.googleapis.com/v1beta/openai/">
+                        </div>
+                        <div class="form-group">
+                            <label class="form-label" for="modelInput">Model Identifier</label>
+                            <input type="text" id="modelInput" value="gemini-2.0-flash">
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Fixed Sidebar Footer Actions -->
+        <div class="sidebar-footer">
+            <div class="sidebar-footer-stats">
+                <span>Indexed Chunks:</span>
+                <strong id="vectorCountText" style="color:var(--text-main); font-family:'JetBrains Mono';">0</strong>
+            </div>
+            <div class="sidebar-footer-actions">
+                <button class="btn btn-secondary" style="flex:1; font-size:0.76rem; padding:0.45rem;" onclick="resetConversationalMemory()" title="Reset dialogue memory">
+                    🔄 Reset Chat
+                </button>
+                <button class="btn btn-secondary" style="flex:1; font-size:0.76rem; padding:0.45rem;" onclick="exportAuditSessionJSON()" title="Export JSON audit trace">
+                    📥 Export JSON
+                </button>
+                <button class="btn btn-danger-ghost" onclick="clearVectorStore()" title="Wipe ChromaDB vector store">
+                    🗑️
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- -------------------------------------------------------------
+         MAIN CHAT CONSOLE
+         ------------------------------------------------------------- -->
+    <div class="main-chat-container">
+        
+        <!-- Top Executive Navbar -->
+        <div class="top-navbar">
+            <div class="navbar-brand-group">
+                <div class="navbar-title">Knowledge Radar Console</div>
+                <div class="navbar-badge">v2.5 Live Audit</div>
+            </div>
+
+            <!-- Global Live Session Telemetry Ribbon -->
+            <div class="session-ribbon">
+                <div class="ribbon-pill" title="Conversational session ID">
+                    <span>ID:</span>
+                    <strong id="ribbonSessionId">#init</strong>
+                </div>
+                <div style="width:1px; height:12px; background:var(--border-subtle);"></div>
+                <div class="ribbon-pill" title="Cumulative tokens consumed">
+                    <span>🪙</span>
+                    <strong id="ribbonTokens">0</strong>
+                </div>
+                <div style="width:1px; height:12px; background:var(--border-subtle);"></div>
+                <div class="ribbon-pill" title="Average groundedness / faithfulness score">
+                    <span>🎯</span>
+                    <strong id="ribbonFaithfulness">100%</strong>
+                </div>
+                <div style="width:1px; height:12px; background:var(--border-subtle);"></div>
+                <div id="ribbonDriftBadge" class="status-pill pill-stable" title="Quality drift monitor">
+                    🟢 Consistent
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Messages Feed -->
+        <div class="chat-messages" id="chatMessages">
+            <div class="assistant-card" id="welcomeMessage">
+                <div style="font-size:1.1rem; font-weight:700; color:#38BDF8; display:flex; align-items:center; gap:0.5rem;">
+                    <span>👋</span> Welcome to Knowledge Radar Intelligence Console
+                </div>
+                <div class="markdown-body">
+                    Upload documents or URLs in the <strong>Document Vault</strong> on the left, or ask questions directly below.<br><br>
+                    <strong>Interactive Audit Capabilities:</strong>
+                    <ul>
+                        <li><strong>⚡ Multi-Source Balanced RAG:</strong> Simultaneously correlates PDFs, YouTube videos, and web articles without cross-document starvation.</li>
+                        <li><strong>📊 Real-Time Evaluation:</strong> Sub-millisecond latency tracking, prompt token accounting, and claim-level faithfulness.</li>
+                        <li><strong>🔍 Transparent Evidence Drawer:</strong> Click <em>"Audit Evidence & Claims"</em> on any answer to verify exact supporting passages.</li>
+                        <li><strong>⚠️ Uncertainty Flagging:</strong> Any claim lacking context backing is flagged with <code>[⚠️ Verification Required]</code> for user verification.</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Live Step Progress Banner -->
+        <div id="progressBanner" style="display:none; padding:0 2rem 0.6rem 2rem;">
+            <div class="progress-banner">
+                <span class="spinner"></span>
+                <span id="progressText">Processing query...</span>
+            </div>
+        </div>
+
+        <!-- Chat Input Area -->
+        <div class="chat-input-wrapper">
+            <!-- Quick Suggestion Chips -->
+            <div class="prompt-quick-chips">
+                <div class="quick-chip" onclick="applyQuickPrompt('Summarize the key findings and evidence from the loaded sources.')">
+                    ✨ Summarize Sources
+                </div>
+                <div class="quick-chip" onclick="applyQuickPrompt('What is the relation between the PDF and the YouTube video? Compare their complementary insights.')">
+                    🔍 Compare PDF & Video
+                </div>
+                <div class="quick-chip" onclick="applyQuickPrompt('Extract all numbers, metrics, and quantitative statistics with citations.')">
+                    📊 Extract Quantitative Metrics
+                </div>
+            </div>
+
+            <!-- Input Bar -->
+            <div class="input-bar-container">
+                <button class="btn-attach" onclick="quickAttachFile()" title="Attach PDF or Image to this prompt">
+                    📎
+                </button>
+                <input type="text" class="chat-text-input" id="userQueryInput" placeholder="Ask a question across your documents or live web facts..." onkeypress="handleKeyPress(event)">
+                <button class="btn-send-message" id="btnSend" onclick="sendChatMessage()">
+                    <span id="btnIcon">⚡</span> Send
+                </button>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- -------------------------------------------------------------
+         JAVASCRIPT CONTROLLERS
+         ------------------------------------------------------------- -->
+    <script>
+        const GEMINI_BASE = "https://generativelanguage.googleapis.com/v1beta/openai/";
+        const GEMINI_MODELS = {
+            "low": "gemini-2.0-flash-lite",
+            "medium": "gemini-2.0-flash",
+            "high": "gemini-1.5-pro"
+        };
+        const OPENROUTER_BASE = "https://openrouter.ai/api/v1";
+        const OPENROUTER_MODEL = "meta-llama/llama-3.3-70b-instruct:free";
+        const NVIDIA_BASE = "https://integrate.api.nvidia.com/v1";
+        const NVIDIA_MODEL = "meta/llama-3.3-70b-instruct";
+
+        let currentSessionId = localStorage.getItem('kr_session_id') || Math.random().toString(36).substring(2, 14);
+        localStorage.setItem('kr_session_id', currentSessionId);
+        let sessionAuditLog = [];
+
+        window.onload = function() {
+            document.getElementById('ribbonSessionId').innerText = `#${currentSessionId.substring(0, 8)}`;
+            onProviderChange();
+            fetchStatus();
+            setInterval(fetchStatus, 8000);
+        };
+
+        /* Sidebar Tabs */
+        function switchSidebarTab(tab) {
+            const btnVault = document.getElementById('tabBtnVault');
+            const btnModel = document.getElementById('tabBtnModel');
+            const paneVault = document.getElementById('sidebarPaneVault');
+            const paneModel = document.getElementById('sidebarPaneModel');
+
+            if (tab === 'vault') {
+                btnVault.classList.add('active');
+                btnModel.classList.remove('active');
+                paneVault.style.display = 'flex';
+                paneModel.style.display = 'none';
+            } else {
+                btnVault.classList.remove('active');
+                btnModel.classList.add('active');
+                paneVault.style.display = 'none';
+                paneModel.style.display = 'flex';
+            }
+        }
+
+        /* Ingestion Mode Switcher */
+        function switchIngestMode(mode) {
+            ['Pdf', 'Img', 'Yt', 'Web'].forEach(m => {
+                const btn = document.getElementById('modeBtn' + m);
+                const panel = document.getElementById('panel' + m);
+                if (btn) btn.classList.remove('active');
+                if (panel) panel.classList.remove('active');
+            });
+
+            const targetBtn = document.getElementById('modeBtn' + mode.charAt(0).toUpperCase() + mode.slice(1));
+            const targetPanel = document.getElementById('panel' + mode.charAt(0).toUpperCase() + mode.slice(1));
+            if (targetBtn) targetBtn.classList.add('active');
+            if (targetPanel) targetPanel.classList.add('active');
+        }
+
+        /* Gemini Tier Switcher */
+        function selectGeminiTier(tier) {
+            ['Low', 'Medium', 'High'].forEach(t => {
+                const btn = document.getElementById('tierBtn' + t);
+                if (btn) btn.classList.remove('active');
+            });
+
+            const activeBtn = document.getElementById('tierBtn' + tier.charAt(0).toUpperCase() + tier.slice(1));
+            if (activeBtn) activeBtn.classList.add('active');
+
+            document.getElementById('geminiTierSelect').value = tier;
+            document.getElementById('modelInput').value = GEMINI_MODELS[tier] || "gemini-2.0-flash";
+        }
+
+        /* Provider Selector */
+        function onProviderChange() {
+            const val = document.getElementById('providerSelect').value;
+            const baseUrlInput = document.getElementById('baseUrlInput');
+            const modelInput = document.getElementById('modelInput');
+            const apiKeyLabel = document.getElementById('apiKeyLabel');
+            const apiKeyInput = document.getElementById('apiKeyInput');
+            const geminiTierGroup = document.getElementById('geminiTierGroup');
+
+            if (val === "Gemini") {
+                baseUrlInput.value = GEMINI_BASE;
+                geminiTierGroup.style.display = "flex";
+                selectGeminiTier('medium');
+                apiKeyLabel.innerText = "Gemini API Key (Google AI Studio)";
+                apiKeyInput.placeholder = "AIzaSy...";
+            } else if (val === "OpenRouter") {
+                baseUrlInput.value = OPENROUTER_BASE;
+                modelInput.value = OPENROUTER_MODEL;
+                geminiTierGroup.style.display = "none";
+                apiKeyLabel.innerText = "OpenRouter API Key";
+                apiKeyInput.placeholder = "sk-or-v1-...";
+            } else if (val === "NVIDIA") {
+                baseUrlInput.value = NVIDIA_BASE;
+                modelInput.value = NVIDIA_MODEL;
+                geminiTierGroup.style.display = "none";
+                apiKeyLabel.innerText = "NVIDIA NIM API Key";
+                apiKeyInput.placeholder = "nvapi-...";
+            } else {
+                baseUrlInput.value = "https://api.openai.com/v1";
+                modelInput.value = "gpt-4o-mini";
+                geminiTierGroup.style.display = "none";
+                apiKeyLabel.innerText = "OpenAI API Key";
+                apiKeyInput.placeholder = "sk-...";
+            }
+        }
+
+        function toggleAdvancedSettings() {
+            const body = document.getElementById('advancedSettingsBody');
+            const arrow = document.getElementById('advancedArrow');
+            if (body.style.display === "none") {
+                body.style.display = "flex";
+                arrow.innerText = "▲";
+            } else {
+                body.style.display = "none";
+                arrow.innerText = "▼";
+            }
+        }
+
+        function updateFileLabel(inputId, labelId) {
+            const input = document.getElementById(inputId);
+            const label = document.getElementById(labelId);
+            if (input.files && input.files.length > 0) {
+                label.innerText = "✓ " + input.files[0].name;
+                label.style.color = "#34D399";
+            }
+        }
+
+        function quickAttachFile() {
+            switchSidebarTab('vault');
+            switchIngestMode('pdf');
+            document.getElementById('pdfInput').click();
+        }
+
+        function applyQuickPrompt(text) {
+            const input = document.getElementById('userQueryInput');
+            input.value = text;
+            input.focus();
+        }
+
+        /* Active Sources Summary Renderer */
+        function renderSourcesSummary(summary) {
+            const list = document.getElementById('activeSourcesList');
+            const countBadge = document.getElementById('sourcesCountBadge');
+            if (!list) return;
+
+            const entries = Object.entries(summary || {});
+            if (countBadge) countBadge.innerText = `${entries.length} source${entries.length === 1 ? '' : 's'}`;
+
+            if (entries.length === 0) {
+                list.innerHTML = '<div style="color:var(--text-muted); font-size:0.75rem; font-style:italic; padding:0.2rem 0;">No documents or links indexed yet.</div>';
+                return;
+            }
+
+            list.innerHTML = entries.map(([src, count]) => {
+                let icon = "📄";
+                if (src.includes("YouTube") || src.includes("youtu")) icon = "🎥";
+                else if (src.includes("Image")) icon = "🖼️";
+                else if (src.includes("Web")) icon = "🌐";
+
+                return `
+                    <div class="source-card">
+                        <div class="source-card-title" title="${escapeHtml(src)}">
+                            <span>${icon}</span>
+                            <span>${escapeHtml(src)}</span>
+                        </div>
+                        <span class="source-chunk-tag">${count} ch</span>
+                    </div>
+                `;
+            }).join('');
+        }
+
+        async function fetchStatus() {
+            try {
+                const res = await fetch('/api/status');
+                const data = await res.json();
+
+                const box = document.getElementById('ollamaStatusBox');
+                if (data.ollama_online) {
+                    box.className = "sidebar-status-pill status-online";
+                    box.style.background = "var(--success-bg)";
+                    box.style.color = "var(--success)";
+                    box.innerHTML = `<span>🟢</span> Ollama Online`;
+                } else {
+                    box.className = "sidebar-status-pill status-offline";
+                    box.style.background = "rgba(255,255,255,0.05)";
+                    box.style.color = "var(--text-muted)";
+                    box.innerHTML = `<span>☁️</span> Cloud Engine`;
+                }
+
+                document.getElementById('vectorCountText').innerText = data.vector_count;
+                if (data.sources_summary) renderSourcesSummary(data.sources_summary);
+            } catch (e) {
+                console.error("Error fetching status:", e);
+            }
+        }
+
+        async function testCloudConnection() {
+            const key = document.getElementById('apiKeyInput').value.trim();
+            const toasts = document.getElementById('indexToasts');
+            if (!key) {
+                toasts.innerHTML = '<div class="toast-item" style="color:#F87171;">⚠️ Please enter an API Key to test.</div>';
+                return;
+            }
+
+            toasts.innerHTML = '<div class="toast-item" style="color:var(--accent-primary);">🔌 Verifying connection...</div>';
+
+            const formData = new FormData();
+            formData.append('cloud_base_url', document.getElementById('baseUrlInput').value);
+            formData.append('cloud_model', document.getElementById('modelInput').value);
+            formData.append('cloud_api_key', key);
+
+            try {
+                const res = await fetch('/api/test_cloud', { method: 'POST', body: formData });
+                const data = await res.json();
+                if (data.success) {
+                    toasts.innerHTML = `<div class="toast-item" style="color:#34D399;">🟢 ${escapeHtml(data.detail)}</div>`;
+                } else {
+                    toasts.innerHTML = `<div class="toast-item" style="color:#F87171;">🔴 ${escapeHtml(data.detail)}</div>`;
+                }
+            } catch (e) {
+                toasts.innerHTML = `<div class="toast-item" style="color:#F87171;">🔴 Test Error: ${escapeHtml(e.message)}</div>`;
+            }
+        }
+
+        async function indexVaultInputs() {
+            const pdfInput = document.getElementById('pdfInput');
+            const imgInput = document.getElementById('imgInput');
+            const ytInput = document.getElementById('ytInput');
+            const webInput = document.getElementById('webInput');
+            const btnIndex = document.getElementById('btnIndex');
+
+            const pdfFile = pdfInput.files[0];
+            const imgFile = imgInput.files[0];
+            const ytUrl = ytInput.value.trim();
+            const webUrl = webInput.value.trim();
+
+            const toasts = document.getElementById('indexToasts');
+
+            if (!pdfFile && !imgFile && !ytUrl && !webUrl) {
+                toasts.innerHTML = '<div class="toast-item" style="color:#F59E0B;">⚠️ Please select a file or enter a link first.</div>';
+                return;
+            }
+
+            const formData = new FormData();
+            if (pdfFile) formData.append('pdf_file', pdfFile);
+            if (imgFile) formData.append('img_file', imgFile);
+            if (ytUrl) formData.append('yt_url', ytUrl);
+            if (webUrl) formData.append('web_url', webUrl);
+
+            btnIndex.disabled = true;
+            btnIndex.innerHTML = '<span class="spinner"></span> Ingesting...';
+            toasts.innerHTML = '<div class="toast-item" style="color:var(--accent-primary);">⚡ Parsing & generating embeddings...</div>';
+
+            try {
+                const res = await fetch('/api/index', { method: 'POST', body: formData });
+                const data = await res.json();
+
+                toasts.innerHTML = '';
+                if (data.added > 0) {
+                    toasts.innerHTML += `<div class="toast-item">✅ Indexed ${data.added} new chunks into Vault!</div>`;
+                }
+                (data.messages || []).forEach(m => {
+                    toasts.innerHTML += `<div class="toast-item">✓ ${escapeHtml(m)}</div>`;
+                });
+                if (data.added === 0 && (!data.messages || data.messages.length === 0)) {
+                    toasts.innerHTML = '<div class="toast-item" style="color:var(--text-muted);">ℹ️ Inputs are already indexed.</div>';
+                }
+
+                document.getElementById('vectorCountText').innerText = data.total_count;
+                if (data.sources_summary) renderSourcesSummary(data.sources_summary);
+            } catch (e) {
+                toasts.innerHTML = `<div class="toast-item" style="color:#F87171;">🔴 Indexing Error: ${e.message}</div>`;
+            } finally {
+                btnIndex.disabled = false;
+                btnIndex.innerHTML = '<span>⚡</span> Ingest & Index Input';
+            }
+        }
+
+        async function clearVectorStore() {
+            if (!confirm("Are you sure you want to clear the entire Vault index?")) return;
+            try {
+                const res = await fetch('/api/clear', { method: 'POST' });
+                const data = await res.json();
+                document.getElementById('vectorCountText').innerText = data.total_count;
+                document.getElementById('indexToasts').innerHTML = '<div class="toast-item">Cleared Vault index.</div>';
+                renderSourcesSummary({});
+            } catch (e) {
+                alert("Error clearing vector store: " + e.message);
+            }
+        }
+
+        async function resetConversationalMemory() {
+            try {
+                const formData = new FormData();
+                formData.append('session_id', currentSessionId);
+                await fetch('/api/session/reset', { method: 'POST', body: formData });
+            } catch (e) {
+                console.error("Session reset error:", e);
+            }
+
+            currentSessionId = Math.random().toString(36).substring(2, 14);
+            localStorage.setItem('kr_session_id', currentSessionId);
+            sessionAuditLog = [];
+
+            document.getElementById('ribbonSessionId').innerText = `#${currentSessionId.substring(0, 8)}`;
+            document.getElementById('ribbonTokens').innerText = "0";
+            document.getElementById('ribbonFaithfulness').innerText = "100%";
+
+            const driftBadge = document.getElementById('ribbonDriftBadge');
+            driftBadge.className = "status-pill pill-stable";
+            driftBadge.innerText = "🟢 Consistent";
+
+            const chatMessages = document.getElementById('chatMessages');
+            chatMessages.innerHTML = `
+                <div class="assistant-card">
+                    <div style="font-weight:700; color:#38BDF8;">🔄 Memory Reset: Started a fresh conversational session (#${currentSessionId.substring(0, 8)}). Ask away!</div>
+                </div>
+            `;
+        }
+
+        function exportAuditSessionJSON() {
+            if (sessionAuditLog.length === 0) {
+                alert("No queries executed in this session yet. Ask a question to generate audit data.");
+                return;
+            }
+            const exportData = {
+                session_id: currentSessionId,
+                exported_at: new Date().toISOString(),
+                total_turns: sessionAuditLog.length,
+                turns: sessionAuditLog
+            };
+            const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `knowledge_radar_audit_${currentSessionId}.json`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+
+        function handleKeyPress(e) {
+            if (e.key === 'Enter') sendChatMessage();
+        }
+
+        function setProgressStep(msg) {
+            const banner = document.getElementById('progressBanner');
+            const text = document.getElementById('progressText');
+            if (msg) {
+                banner.style.display = "block";
+                text.innerText = msg;
+            } else {
+                banner.style.display = "none";
+            }
+        }
+
+        function toggleEvidenceDrawer(drawerId) {
+            const drawer = document.getElementById(drawerId);
+            if (drawer) {
+                drawer.style.display = (drawer.style.display === "none") ? "block" : "none";
+            }
+        }
+
+        function switchEvidenceTab(event, tabId, containerId) {
+            const container = document.getElementById(containerId);
+            if (!container) return;
+            const buttons = container.querySelectorAll('.ev-tab-btn');
+            const contents = container.querySelectorAll('.ev-tab-pane');
+
+            buttons.forEach(b => b.classList.remove('active'));
+            contents.forEach(c => c.classList.remove('active'));
+
+            event.currentTarget.classList.add('active');
+            const activeContent = container.querySelector('#' + tabId);
+            if (activeContent) activeContent.classList.add('active');
+        }
+
+        function copyMarkdownText(btn, text) {
+            navigator.clipboard.writeText(text).then(() => {
+                const orig = btn.innerText;
+                btn.innerText = "✓ Copied";
+                setTimeout(() => { btn.innerText = orig; }, 1500);
+            });
+        }
+
+        /* Main Chat Dispatcher */
+        async function sendChatMessage() {
+            const input = document.getElementById('userQueryInput');
+            const query = input.value.trim();
+            if (!query) return;
+
+            // Render User Bubble
+            const chatMessages = document.getElementById('chatMessages');
+            const userRow = document.createElement('div');
+            userRow.className = "message-row user";
+            userRow.innerHTML = `<div class="user-bubble">${escapeHtml(query)}</div>`;
+            chatMessages.appendChild(userRow);
+
+            input.value = "";
+            chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            // Disable Send Button
+            const btn = document.getElementById('btnSend');
+            const btnIcon = document.getElementById('btnIcon');
+            btn.disabled = true;
+            btnIcon.className = "spinner";
+            btnIcon.innerText = "";
+
+            setProgressStep("⚡ Step 1: Ingesting inputs, contextualizing memory & searching Vault...");
+
+            const formData = new FormData();
+            formData.append('query', query);
+            formData.append('session_id', currentSessionId);
+            formData.append('cloud_base_url', document.getElementById('baseUrlInput').value);
+            formData.append('cloud_model', document.getElementById('modelInput').value);
+            formData.append('cloud_api_key', document.getElementById('apiKeyInput').value);
+
+            const pdfInput = document.getElementById('pdfInput');
+            const imgInput = document.getElementById('imgInput');
+            if (pdfInput.files[0]) formData.append('pdf_file', pdfInput.files[0]);
+            if (imgInput.files[0]) formData.append('img_file', imgInput.files[0]);
+            formData.append('yt_url', document.getElementById('ytInput').value.trim());
+            formData.append('web_url', document.getElementById('webInput').value.trim());
+
+            try {
+                setTimeout(() => setProgressStep("🌐 Step 2: Probing time-sensitivity & verifying live web facts..."), 1000);
+                setTimeout(() => setProgressStep("🤖 Step 3: Performing Multi-Source Synthesis & Grounding Audit..."), 2200);
+
+                const res = await fetch('/api/audit', { method: 'POST', body: formData });
+                const data = await res.json();
+
+                sessionAuditLog.push(data);
+
+                // Update active stats
+                if (data.total_vector_count !== undefined) {
+                    document.getElementById('vectorCountText').innerText = data.total_vector_count;
+                }
+                if (data.sources_summary) {
+                    renderSourcesSummary(data.sources_summary);
+                }
+
+                // Update Session Analytics Ribbon
+                if (data.session_summary) {
+                    document.getElementById('ribbonTokens').innerText = (data.session_summary.cumulative_tokens || 0).toLocaleString();
+                    const avgFaithPct = Math.round((data.session_summary.avg_faithfulness || 1.0) * 100);
+                    document.getElementById('ribbonFaithfulness').innerText = `${avgFaithPct}%`;
+                }
+
+                // Update Drift Indicator
+                const driftBadge = document.getElementById('ribbonDriftBadge');
+                if (data.drift) {
+                    if (data.drift.status === "STABLE" || data.drift.status === "INITIAL") {
+                        driftBadge.className = "status-pill pill-stable";
+                        driftBadge.innerText = "🟢 Consistent";
+                    } else if (data.drift.status === "MODERATE_VARIANCE") {
+                        driftBadge.className = "status-pill pill-warning";
+                        driftBadge.innerText = "🟡 Variance";
+                    } else {
+                        driftBadge.className = "status-pill pill-drift";
+                        driftBadge.innerText = "🔴 Drift Warning";
+                    }
+                }
+
+                // Provider Badge
+                const badgeText = data.provider_badge || "Provider Ready";
+                let badgeClass = "badge-offline";
+                if (badgeText.includes("Gemini")) badgeClass = "badge-gemini";
+                else if (badgeText.includes("NVIDIA") || badgeText.includes("Cloud")) badgeClass = "badge-cloud";
+                else if (badgeText.includes("Ollama")) badgeClass = "badge-ollama";
+
+                const turnId = "turn_" + Math.random().toString(36).substring(2, 9);
+                const metrics = data.metrics || {};
+                const faithfulnessPct = Math.round((metrics.faithfulness || 0) * 100);
+                const totalTokens = metrics.total_tokens || 0;
+                const promptTokens = metrics.prompt_tokens || 0;
+                const compTokens = metrics.completion_tokens || 0;
+                const latencies = metrics.latencies_ms || {};
+                const totalLatency = latencies.total || 0;
+                const citationsFound = metrics.citations_found || 0;
+                const unverifiedCount = metrics.unverified_claims_count || 0;
+
+                let faithColor = "#34D399";
+                if (faithfulnessPct < 60) faithColor = "#F87171";
+                else if (faithfulnessPct < 80) faithColor = "#FBBF24";
+
+                // Format Markdown & Uncertainty Highlighting
+                let rawSynthesis = data.synthesis || "";
+                rawSynthesis = rawSynthesis.replace(
+                    /\[⚠️\s*Verification Required:[^\]]+\]/gi,
+                    (match) => `<span class="verification-badge" title="Flagged assertion for user validation">${escapeHtml(match)}</span>`
+                );
+                rawSynthesis = rawSynthesis.replace(
+                    /\[(PDF:[^\]]+|YouTube[^\]]*|WebURL[^\]]*|Image:[^\]]+|Doc\s*\d+)\]/gi,
+                    (match) => `<span class="citation-chip" onclick="toggleEvidenceDrawer('${turnId}')" title="Click to inspect source chunk in Evidence Drawer">${escapeHtml(match)}</span>`
+                );
+
+                const parsedMarkdown = (typeof marked !== 'undefined') ? marked.parse(rawSynthesis) : rawSynthesis;
+
+                // Document Chunks
+                const docSnippets = (data.doc_context || []).map((s, i) => `
+                    <div class="passage-snippet">
+                        <div class="passage-snippet-title">
+                            <span>#${i+1} — ${escapeHtml(s.source || "Context")} [Chunk ${s.chunk_index ?? i}]</span>
+                            <span style="font-family:'JetBrains Mono'; font-size:0.7rem; color:var(--text-muted);">Score: ${s.score ?? 0.85}</span>
+                        </div>
+                        <div style="color:#CBD5E1;">${escapeHtml(s.text || "")}</div>
+                    </div>
+                `).join('');
+
+                // Web Snippets
+                const webSnippets = (data.web_context || []).map(w => `
+                    <div class="passage-snippet">
+                        <div class="passage-snippet-title">
+                            <span>🌐 ${escapeHtml(w.title || "Web Result")}</span>
+                        </div>
+                        <div>${escapeHtml(w.snippet || "")}</div>
+                        <a href="${w.url}" target="_blank" style="color:var(--accent-primary); font-size:0.75rem; text-decoration:none;">${escapeHtml(w.url)} ↗</a>
+                    </div>
+                `).join('');
+
+                // Claims Rows
+                const claimsList = (data.claims_audit && data.claims_audit.claims) || [];
+                const claimRows = claimsList.map(c => {
+                    let pillClass = "claim-grounded";
+                    let pillText = "✓ Grounded";
+                    if (c.status === "VERIFICATION_REQUIRED") {
+                        pillClass = "claim-unverified";
+                        pillText = "⚠️ Verification Required";
+                    } else if (c.status === "LOW_EVIDENCE") {
+                        pillClass = "claim-low";
+                        pillText = "⚠️ Low Context Evidence";
+                    } else if (c.status === "PARTIAL_SUPPORT") {
+                        pillClass = "claim-grounded";
+                        pillText = "~ Moderate Overlap";
+                    }
+
+                    return `
+                        <tr>
+                            <td style="color:var(--text-muted); font-weight:700;">#${c.claim_index}</td>
+                            <td>${escapeHtml(c.text)}</td>
+                            <td><span class="claim-pill ${pillClass}">${pillText}</span></td>
+                            <td style="font-weight:600; color:#38BDF8; font-family:'JetBrains Mono';">${Math.round(c.confidence * 100)}%</td>
+                            <td style="color:var(--text-muted); font-size:0.74rem;">${escapeHtml(c.supporting_source)}</td>
+                        </tr>
+                    `;
+                }).join('');
+
+                // Format auto-indexed messages
+                const autoIndexAlerts = (data.auto_indexed_messages || []).map(m => `
+                    <div style="font-size:0.75rem; color:#34D399; display:flex; align-items:center; gap:0.3rem;">
+                        <span>✓</span> ${escapeHtml(m)}
+                    </div>
+                `).join('');
+
+                // Render Assistant Card (Answer First, Meta Strip, Collapsible Audit Drawer)
+                const assistRow = document.createElement('div');
+                assistRow.className = "message-row assistant";
+
+                assistRow.innerHTML = `
+                    <div class="assistant-card">
+                        ${autoIndexAlerts ? `<div style="background:rgba(16,185,129,0.1); border:1px solid #10B981; border-radius:6px; padding:0.4rem 0.7rem;">${autoIndexAlerts}</div>` : ''}
+
+                        <!-- Sleek Meta Strip -->
+                        <div class="assistant-meta-strip">
+                            <div class="meta-strip-left">
+                                <div class="provider-badge ${badgeClass}">${badgeText}</div>
+                                <span class="meta-chip">Turn #${data.turn_index || 1} • ⏱️ ${totalLatency}ms</span>
+                                <span class="meta-chip">🪙 ${totalTokens} tok</span>
+                                <span style="font-size:0.75rem; font-weight:700; color:${faithColor}; font-family:'JetBrains Mono';">🎯 ${faithfulnessPct}% Grounded</span>
+                            </div>
+                            <div class="meta-strip-right">
+                                <button class="btn-audit-toggle" onclick="toggleEvidenceDrawer('${turnId}')">
+                                    <span>📊 Audit Evidence & Claims (${claimsList.length})</span>
+                                </button>
+                                <button class="btn-copy" onclick="copyMarkdownText(this, ${JSON.stringify(data.synthesis || '')})">
+                                    📋 Copy
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Answer Body (Markdown Front & Center) -->
+                        <div class="markdown-body">
+                            ${parsedMarkdown}
+                        </div>
+
+                        <!-- Collapsible Evidence & Audit Drawer -->
+                        <div id="${turnId}" class="evidence-drawer" style="display:none;">
+                            <div class="evidence-tabs-bar">
+                                <button class="ev-tab-btn active" onclick="switchEvidenceTab(event, '${turnId}_claims', '${turnId}')">
+                                    📋 Claims Grounding (${claimsList.length})
+                                </button>
+                                <button class="ev-tab-btn" onclick="switchEvidenceTab(event, '${turnId}_docs', '${turnId}')">
+                                    📄 Vault Passages (${(data.doc_context || []).length})
+                                </button>
+                                <button class="ev-tab-btn" onclick="switchEvidenceTab(event, '${turnId}_web', '${turnId}')">
+                                    🌐 Web Verification (${(data.web_context || []).length})
+                                </button>
+                                <button class="ev-tab-btn" onclick="switchEvidenceTab(event, '${turnId}_telemetry', '${turnId}')">
+                                    ⏱️ Telemetry & Math
+                                </button>
+                            </div>
+
+                            <!-- Pane 1: Claims Audit -->
+                            <div id="${turnId}_claims" class="ev-tab-pane active">
+                                ${claimRows ? `
+                                    <table class="claim-table">
+                                        <thead>
+                                            <tr>
+                                                <th style="width:25px;">#</th>
+                                                <th>Claim Statement</th>
+                                                <th style="width:140px;">Status</th>
+                                                <th style="width:65px;">Score</th>
+                                                <th>Supporting Match</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>${claimRows}</tbody>
+                                    </table>
+                                ` : '<div style="color:var(--text-muted);">No discrete factual assertions detected.</div>'}
+                            </div>
+
+                            <!-- Pane 2: Vault Passages -->
+                            <div id="${turnId}_docs" class="ev-tab-pane">
+                                ${docSnippets || '<div style="color:var(--text-muted);">No document context found in Vault.</div>'}
+                            </div>
+
+                            <!-- Pane 3: Web Verification -->
+                            <div id="${turnId}_web" class="ev-tab-pane">
+                                ${webSnippets || '<div style="color:var(--text-muted);">Query bypassed live web search or returned no web results.</div>'}
+                            </div>
+
+                            <!-- Pane 4: Telemetry -->
+                            <div id="${turnId}_telemetry" class="ev-tab-pane">
+                                <div class="telemetry-grid">
+                                    <div class="telemetry-card">
+                                        <div class="telemetry-card-label">Retrieval Latency</div>
+                                        <div class="telemetry-card-value">${latencies.retrieval || 0} ms</div>
+                                    </div>
+                                    <div class="telemetry-card">
+                                        <div class="telemetry-card-label">Web Search Latency</div>
+                                        <div class="telemetry-card-value">${latencies.web || 0} ms</div>
+                                    </div>
+                                    <div class="telemetry-card">
+                                        <div class="telemetry-card-label">Synthesis Latency</div>
+                                        <div class="telemetry-card-value">${latencies.synthesis || 0} ms</div>
+                                    </div>
+                                    <div class="telemetry-card">
+                                        <div class="telemetry-card-label">Total Turn Time</div>
+                                        <div class="telemetry-card-value">${totalLatency} ms</div>
+                                    </div>
+                                    <div class="telemetry-card">
+                                        <div class="telemetry-card-label">Prompt Tokens</div>
+                                        <div class="telemetry-card-value">${promptTokens}</div>
+                                    </div>
+                                    <div class="telemetry-card">
+                                        <div class="telemetry-card-label">Completion Tokens</div>
+                                        <div class="telemetry-card-value">${compTokens}</div>
+                                    </div>
+                                    <div class="telemetry-card">
+                                        <div class="telemetry-card-label">Total Turn Tokens</div>
+                                        <div class="telemetry-card-value">${totalTokens}</div>
+                                    </div>
+                                    <div class="telemetry-card">
+                                        <div class="telemetry-card-label">Unsupported Rate</div>
+                                        <div class="telemetry-card-value">${metrics.unsupported_claim_rate || 0}%</div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                `;
+
+                chatMessages.appendChild(assistRow);
+                chatMessages.scrollTop = chatMessages.scrollHeight;
+
+            } catch (e) {
+                const errRow = document.createElement('div');
+                errRow.className = "message-row assistant";
+                errRow.innerHTML = `<div class="assistant-card" style="border-color:#EF4444;"><div style="color:#F87171;">🚨 Error executing audit: ${escapeHtml(e.message)}</div></div>`;
+                chatMessages.appendChild(errRow);
+            } finally {
+                setProgressStep(null);
+                btn.disabled = false;
+                btnIcon.className = "";
+                btnIcon.innerText = "⚡";
+            }
+        }
+
+        function escapeHtml(text) {
+            if (!text) return "";
+            return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        }
+    </script>
+</body>
+</html>

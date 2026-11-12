@@ -59,8 +59,12 @@ venv.bak/
 
 # Local databases and stores
 chroma_db/
+demo_output/
 *.db
 *.sqlite3
+*.log
+*.tmp
+Thumbs.db
 
 # Environment variables & secrets
 .env

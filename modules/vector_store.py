@@ -1,15 +1,13 @@
 """
-===============================================================================
-📦 MODULE: Local Vector Store (Pure Python Zero-Latency Engine)
-===============================================================================
-Handles local embedding generation, vector indexing, and cosine similarity search.
-Uses a zero-dependency pure-Python vector engine to guarantee 100% reliable
-instant indexing with ZERO ONNX, C++ DLL, or telemetry runtime requirements.
-===============================================================================
+Local Vector Store (Pure-Python Feature Hashing Engine).
+
+Computes deterministic unit-normalized feature embeddings via CRC32 hashing
+and performs cosine similarity retrieval without external C++ or ONNX dependencies.
 """
 
 import math
 import re
+import zlib
 from config import COLLECTION_NAME, DEFAULT_TOP_K
 
 
@@ -29,8 +27,7 @@ class KnowledgeVectorStore:
             tokens = re.findall(r'\w+', str(text).lower())
             vec = [0.0] * dim
             for token in tokens:
-                # Deterministic token hash
-                idx = abs(hash(token)) % dim
+                idx = (zlib.crc32(token.encode("utf-8")) & 0xFFFFFFFF) % dim
                 vec[idx] += 1.0
             norm = math.sqrt(sum(x * x for x in vec)) or 1.0
             embeddings.append([x / norm for x in vec])
@@ -64,13 +61,8 @@ class KnowledgeVectorStore:
     def search_chunks(self, query: str, top_k: int = DEFAULT_TOP_K) -> list:
         """
         Queries vector store for top matching text chunks relative to query via cosine similarity.
-        
-        Args:
-            query (str): Search prompt.
-            top_k (int): Number of top results to return.
-            
-        Returns:
-            list of dicts: Retrieved matching context snippets with metadata.
+        When multiple distinct sources are indexed, guarantees balanced representation across
+        all sources to prevent any single document from monopolizing the context window.
         """
         if not self.chunks:
             return []
@@ -79,22 +71,78 @@ class KnowledgeVectorStore:
         scored = []
 
         for item in self.chunks:
-            # Cosine similarity dot product (vectors are unit-normalized)
             dot = sum(a * b for a, b in zip(q_vec, item["embedding"]))
             scored.append((dot, item))
 
-        # Sort by similarity descending
         scored.sort(key=lambda x: x[0], reverse=True)
 
+        unique_sources = list(dict.fromkeys(item["source"] for _, item in scored))
+
+        # Single source or strict top_k smaller than source count
+        if len(unique_sources) <= 1 or top_k < len(unique_sources):
+            retrieved = []
+            for score, item in scored[:top_k]:
+                retrieved.append({
+                    "text": item["text"],
+                    "source": item["source"],
+                    "chunk_index": item["chunk_index"],
+                    "distance": round(1.0 - score, 4),
+                    "score": round(score, 4)
+                })
+            return retrieved
+
+        # Multi-source balanced retrieval:
+        # Guarantee representation for every active document/source in the index
+        quota_per_source = max(1, top_k // len(unique_sources))
+
+        source_buckets = {}
+        for score, item in scored:
+            src = item["source"]
+            source_buckets.setdefault(src, []).append((score, item))
+
+        selected_items = []
+        selected_ids = set()
+
+        # Step 1: Allocate guaranteed quota per active source
+        for src in unique_sources:
+            items_for_src = source_buckets.get(src, [])
+            for score, item in items_for_src[:quota_per_source]:
+                item_id = (item["source"], item["chunk_index"])
+                if item_id not in selected_ids and len(selected_items) < top_k:
+                    selected_ids.add(item_id)
+                    selected_items.append((score, item))
+
+        # Step 2: Fill remaining budget with highest scoring chunks globally
+        if len(selected_items) < top_k:
+            for score, item in scored:
+                item_id = (item["source"], item["chunk_index"])
+                if item_id not in selected_ids:
+                    selected_ids.add(item_id)
+                    selected_items.append((score, item))
+                    if len(selected_items) >= top_k:
+                        break
+
+        # Step 3: Re-sort selected items by relevance score
+        selected_items.sort(key=lambda x: x[0], reverse=True)
+
         retrieved = []
-        for score, item in scored[:top_k]:
+        for score, item in selected_items[:top_k]:
             retrieved.append({
                 "text": item["text"],
                 "source": item["source"],
                 "chunk_index": item["chunk_index"],
-                "distance": round(1.0 - score, 4)
+                "distance": round(1.0 - score, 4),
+                "score": round(score, 4)
             })
         return retrieved
+
+    def get_sources_summary(self) -> dict:
+        """Returns a breakdown of chunk counts per unique source."""
+        summary = {}
+        for item in self.chunks:
+            src = item.get("source", "Document")
+            summary[src] = summary.get(src, 0) + 1
+        return summary
 
     def clear_store(self):
         """Clears all indexed vector chunks."""

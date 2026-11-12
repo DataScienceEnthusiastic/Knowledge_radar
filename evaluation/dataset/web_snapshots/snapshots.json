@@ -1,0 +1,30 @@
+{
+  "kr_current_pricing_2025": {
+    "url": "https://raw.githubusercontent.com/knowledge-radar/pricing/2025/pricing.json",
+    "title": "Knowledge Radar Official Pricing (Updated 2025)",
+    "snippet": "Knowledge Radar Pro Developer Plan is $35/month (effective March 2025). Enterprise plan is $185/seat/month. GovCloud is $350/seat/month.",
+    "verified_date": "2025-03-15",
+    "is_conflict_source": true
+  },
+  "qwen_model_specs_2025": {
+    "url": "https://huggingface.co/Qwen/Qwen2.5-Coder-3B",
+    "title": "Qwen2.5-Coder-3B Model Card",
+    "snippet": "Qwen2.5-Coder-3B is a 3-billion parameter code model supporting 32k context length, optimized for local inference on Ollama port 11434.",
+    "verified_date": "2025-01-10",
+    "is_conflict_source": false
+  },
+  "quantum_qubit_record_2025": {
+    "url": "https://quantum-computing-news.org/benchmarks/2025/qubit-coherence",
+    "title": "2025 Superconducting Qubit Coherence Advances",
+    "snippet": "In early 2025 updates, Project Helios extended transmon T1 coherence to 155 microseconds, while 2024 reported 142 microseconds.",
+    "verified_date": "2025-02-01",
+    "is_conflict_source": true
+  },
+  "techcorp_q4_2024_news": {
+    "url": "https://finance.example.com/techcorp-q4-2024-earnings",
+    "title": "TechCorp Reports Q4 2024 Revenue of $4.82B",
+    "snippet": "TechCorp reported Q4 2024 revenue of $4.82B, up 14.5% YoY, led by $2.15B in Cloud Infrastructure revenue and $910M net income.",
+    "verified_date": "2025-01-20",
+    "is_conflict_source": false
+  }
+}

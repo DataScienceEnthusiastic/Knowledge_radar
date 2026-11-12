@@ -1,0 +1,23 @@
+{
+  "metadata": {
+    "experiment_id": "EXP-00-INTEGRITY-AUDIT",
+    "timestamp": "2026-11-12T23:52:51.969253",
+    "git_commit": "0d6f572",
+    "dataset_version": "v1.0.0",
+    "reproduction_command": "python evaluation/experiments/exp00_integrity_audit.py"
+  },
+  "audit_summary": {
+    "status": "PASSED",
+    "total_documents_checked": 59,
+    "validation_queries_count": 50,
+    "test_queries_count": 70,
+    "near_duplicate_doc_pairs_count": 0,
+    "split_leakage_overlap_count": 0,
+    "verbatim_contaminated_queries_count": 0
+  },
+  "findings": {
+    "near_duplicate_pairs": [],
+    "leakage_query_ids": [],
+    "contaminated_queries": []
+  }
+}

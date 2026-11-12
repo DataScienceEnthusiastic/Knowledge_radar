@@ -1,29 +1,31 @@
 """
-===============================================================================
-🌐 MODULE: Live Web Search (DuckDuckGo)
-===============================================================================
-Performs real-time web searches using DuckDuckGo (DDGS) to retrieve live, up-to-date
-context snippet verification for user queries.
-===============================================================================
+Live Web Search via DuckDuckGo.
+
+Retrieves real-time context snippets for time-sensitive query verification.
 """
 
-from duckduckgo_search import DDGS
+import logging
+
+logger = logging.getLogger("web_search")
+
+try:
+    from duckduckgo_search import DDGS
+except ImportError:
+    DDGS = None
 
 
 def fetch_live_web_context(query: str, max_results: int = 2) -> list:
     """
     Executes a DuckDuckGo web search and returns top results.
-    
-    Args:
-        query (str): Search prompt.
-        max_results (int): Number of top search results to retrieve (default: 2).
-        
-    Returns:
-        list of dicts: List containing title, snippet, and url for each result.
+    Returns an empty list on failure or when the library is unavailable.
     """
     if not query or not query.strip():
         return []
-        
+
+    if not DDGS:
+        logger.warning("duckduckgo_search library is not installed; web search skipped.")
+        return []
+
     try:
         results = []
         with DDGS() as ddgs:
@@ -37,9 +39,5 @@ def fetch_live_web_context(query: str, max_results: int = 2) -> list:
                     })
         return results
     except Exception as e:
-        # Gracefully handle network/API errors without throwing
-        return [{
-            "title": "Web Search Warning",
-            "snippet": f"Could not perform live web search: {str(e)}",
-            "url": "#"
-        }]
+        logger.warning("Live web search failed for query %r: %s", query, e)
+        return []

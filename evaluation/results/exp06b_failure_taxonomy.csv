@@ -1,0 +1,11 @@
+experiment_id,git_commit,timestamp,failure_category,failure_count,share_of_failures_pct,share_of_total_queries_pct,reproduction_command
+EXP-06B-FAILURE-TAXONOMY,0d6f572,2026-11-12T23:52:57.316459,LLM_REASONING_FAILURE,20,51.28,28.57,python evaluation/experiments/exp06b_posthoc_error_waterfall.py
+EXP-06B-FAILURE-TAXONOMY,0d6f572,2026-11-12T23:52:57.316459,RANKING_FAILURE,10,25.64,14.29,python evaluation/experiments/exp06b_posthoc_error_waterfall.py
+EXP-06B-FAILURE-TAXONOMY,0d6f572,2026-11-12T23:52:57.316459,TEMPORAL_MISMATCH,5,12.82,7.14,python evaluation/experiments/exp06b_posthoc_error_waterfall.py
+EXP-06B-FAILURE-TAXONOMY,0d6f572,2026-11-12T23:52:57.316459,WEB_CONFLICT_RESOLUTION_FAILURE,3,7.69,4.29,python evaluation/experiments/exp06b_posthoc_error_waterfall.py
+EXP-06B-FAILURE-TAXONOMY,0d6f572,2026-11-12T23:52:57.316459,RETRIEVAL_MISSING_EVIDENCE,1,2.56,1.43,python evaluation/experiments/exp06b_posthoc_error_waterfall.py
+EXP-06B-FAILURE-TAXONOMY,0d6f572,2026-11-12T23:52:57.316459,RETRIEVAL_WRONG_EVIDENCE,0,0.0,0.0,python evaluation/experiments/exp06b_posthoc_error_waterfall.py
+EXP-06B-FAILURE-TAXONOMY,0d6f572,2026-11-12T23:52:57.316459,CONTEXT_OVERLOAD,0,0.0,0.0,python evaluation/experiments/exp06b_posthoc_error_waterfall.py
+EXP-06B-FAILURE-TAXONOMY,0d6f572,2026-11-12T23:52:57.316459,CITATION_GROUNDING_HALLUCINATION,0,0.0,0.0,python evaluation/experiments/exp06b_posthoc_error_waterfall.py
+EXP-06B-FAILURE-TAXONOMY,0d6f572,2026-11-12T23:52:57.316459,PARSING_OCR_DEGRADATION,0,0.0,0.0,python evaluation/experiments/exp06b_posthoc_error_waterfall.py
+EXP-06B-FAILURE-TAXONOMY,0d6f572,2026-11-12T23:52:57.316459,SYSTEM_TIMEOUT_API_ERROR,0,0.0,0.0,python evaluation/experiments/exp06b_posthoc_error_waterfall.py

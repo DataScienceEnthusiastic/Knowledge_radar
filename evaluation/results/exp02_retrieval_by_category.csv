@@ -1,0 +1,25 @@
+experiment_id,dataset_version,git_commit,timestamp,strategy,category,sample_count,recall_at_1,recall_at_3,recall_at_5,mrr,ndcg_at_5,avg_retrieval_latency_ms,avg_context_chars_top5,reproduction_command
+EXP-02-RETRIEVAL-BASELINES,v1.0.0,0d6f572,2026-11-12T23:52:53.894822,Dense (Cosine),comparison,8,0.625,0.8125,0.875,0.8375,0.8001,2.048,2174.9,python evaluation/experiments/exp02_retrieval_baselines.py
+EXP-02-RETRIEVAL-BASELINES,v1.0.0,0d6f572,2026-11-12T23:52:53.894822,Dense (Cosine),entity-specific,6,0.5,0.6667,0.6667,0.5833,0.6052,2.047,1802.7,python evaluation/experiments/exp02_retrieval_baselines.py
+EXP-02-RETRIEVAL-BASELINES,v1.0.0,0d6f572,2026-11-12T23:52:53.894822,Dense (Cosine),factual,8,0.5,0.75,0.75,0.6042,0.6414,2.278,2134.2,python evaluation/experiments/exp02_retrieval_baselines.py
+EXP-02-RETRIEVAL-BASELINES,v1.0.0,0d6f572,2026-11-12T23:52:53.894822,Dense (Cosine),keyword-heavy,8,1.0,1.0,1.0,1.0,1.0,2.082,1893.2,python evaluation/experiments/exp02_retrieval_baselines.py
+EXP-02-RETRIEVAL-BASELINES,v1.0.0,0d6f572,2026-11-12T23:52:53.894822,Dense (Cosine),multi-hop,6,0.5833,0.6667,0.75,0.8333,0.7484,2.41,2167.0,python evaluation/experiments/exp02_retrieval_baselines.py
+EXP-02-RETRIEVAL-BASELINES,v1.0.0,0d6f572,2026-11-12T23:52:53.894822,Dense (Cosine),semantic,8,0.25,0.25,0.375,0.275,0.2984,2.251,1937.2,python evaluation/experiments/exp02_retrieval_baselines.py
+EXP-02-RETRIEVAL-BASELINES,v1.0.0,0d6f572,2026-11-12T23:52:53.894822,Dense (Cosine),temporal,6,1.0,1.0,1.0,1.0,1.0,2.296,2268.3,python evaluation/experiments/exp02_retrieval_baselines.py
+EXP-02-RETRIEVAL-BASELINES,v1.0.0,0d6f572,2026-11-12T23:52:53.894822,Dense (Cosine),ALL,50,0.63,0.73,0.77,0.7247,0.7208,2.565,2050.9,python evaluation/experiments/exp02_retrieval_baselines.py
+EXP-02-RETRIEVAL-BASELINES,v1.0.0,0d6f572,2026-11-12T23:52:53.894822,BM25 (Okapi),comparison,8,0.8125,1.0,1.0,1.0,1.0,0.376,2136.9,python evaluation/experiments/exp02_retrieval_baselines.py
+EXP-02-RETRIEVAL-BASELINES,v1.0.0,0d6f572,2026-11-12T23:52:53.894822,BM25 (Okapi),entity-specific,6,0.8333,1.0,1.0,0.9167,0.9385,0.216,1993.8,python evaluation/experiments/exp02_retrieval_baselines.py
+EXP-02-RETRIEVAL-BASELINES,v1.0.0,0d6f572,2026-11-12T23:52:53.894822,BM25 (Okapi),factual,8,1.0,1.0,1.0,1.0,1.0,0.523,2135.6,python evaluation/experiments/exp02_retrieval_baselines.py
+EXP-02-RETRIEVAL-BASELINES,v1.0.0,0d6f572,2026-11-12T23:52:53.894822,BM25 (Okapi),keyword-heavy,8,1.0,1.0,1.0,1.0,1.0,0.24,1877.6,python evaluation/experiments/exp02_retrieval_baselines.py
+EXP-02-RETRIEVAL-BASELINES,v1.0.0,0d6f572,2026-11-12T23:52:53.894822,BM25 (Okapi),multi-hop,6,0.75,1.0,1.0,1.0,1.0,0.394,2146.5,python evaluation/experiments/exp02_retrieval_baselines.py
+EXP-02-RETRIEVAL-BASELINES,v1.0.0,0d6f572,2026-11-12T23:52:53.894822,BM25 (Okapi),semantic,8,0.375,0.875,0.875,0.6042,0.6741,0.254,2020.2,python evaluation/experiments/exp02_retrieval_baselines.py
+EXP-02-RETRIEVAL-BASELINES,v1.0.0,0d6f572,2026-11-12T23:52:53.894822,BM25 (Okapi),temporal,6,1.0,1.0,1.0,1.0,1.0,0.292,2311.2,python evaluation/experiments/exp02_retrieval_baselines.py
+EXP-02-RETRIEVAL-BASELINES,v1.0.0,0d6f572,2026-11-12T23:52:53.894822,BM25 (Okapi),ALL,50,0.82,0.98,0.98,0.9267,0.9405,0.285,2081.4,python evaluation/experiments/exp02_retrieval_baselines.py
+EXP-02-RETRIEVAL-BASELINES,v1.0.0,0d6f572,2026-11-12T23:52:53.894822,Hybrid (RRF k=60),comparison,8,0.8125,0.875,0.9375,1.0,0.9363,2.637,2235.2,python evaluation/experiments/exp02_retrieval_baselines.py
+EXP-02-RETRIEVAL-BASELINES,v1.0.0,0d6f572,2026-11-12T23:52:53.894822,Hybrid (RRF k=60),entity-specific,6,0.5,0.8333,1.0,0.7,0.7748,2.718,1807.3,python evaluation/experiments/exp02_retrieval_baselines.py
+EXP-02-RETRIEVAL-BASELINES,v1.0.0,0d6f572,2026-11-12T23:52:53.894822,Hybrid (RRF k=60),factual,8,0.75,1.0,1.0,0.8333,0.875,3.682,2118.0,python evaluation/experiments/exp02_retrieval_baselines.py
+EXP-02-RETRIEVAL-BASELINES,v1.0.0,0d6f572,2026-11-12T23:52:53.894822,Hybrid (RRF k=60),keyword-heavy,8,1.0,1.0,1.0,1.0,1.0,3.689,1868.0,python evaluation/experiments/exp02_retrieval_baselines.py
+EXP-02-RETRIEVAL-BASELINES,v1.0.0,0d6f572,2026-11-12T23:52:53.894822,Hybrid (RRF k=60),multi-hop,6,0.5833,0.9167,1.0,0.8889,0.8783,4.009,2224.7,python evaluation/experiments/exp02_retrieval_baselines.py
+EXP-02-RETRIEVAL-BASELINES,v1.0.0,0d6f572,2026-11-12T23:52:53.894822,Hybrid (RRF k=60),semantic,8,0.375,0.5,0.5,0.4167,0.4375,3.024,1922.4,python evaluation/experiments/exp02_retrieval_baselines.py
+EXP-02-RETRIEVAL-BASELINES,v1.0.0,0d6f572,2026-11-12T23:52:53.894822,Hybrid (RRF k=60),temporal,6,1.0,1.0,1.0,1.0,1.0,3.291,2216.3,python evaluation/experiments/exp02_retrieval_baselines.py
+EXP-02-RETRIEVAL-BASELINES,v1.0.0,0d6f572,2026-11-12T23:52:53.894822,Hybrid (RRF k=60),ALL,50,0.72,0.87,0.91,0.8307,0.8382,3.417,2052.8,python evaluation/experiments/exp02_retrieval_baselines.py

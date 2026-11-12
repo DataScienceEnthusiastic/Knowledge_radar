@@ -1,0 +1,3 @@
+# Google Cloud Spanner TrueTime and Multi-Version Concurrency
+
+Google Spanner provides globally distributed external consistency (serializability) across multi-region datacenters. TrueTime API exposes monotonically increasing wall-clock time with an explicit uncertainty bound [earliest, latest] using atomic clocks and GPS receivers. Spanner assigns commit timestamps $t$ to transactions such that $t$ is guaranteed to be in the absolute real-time past before returning to the client (commit wait). Paxos state machines replicate tablet splits across datacenters with distributed Two-Phase Locking (2PL) for read-write transactions.

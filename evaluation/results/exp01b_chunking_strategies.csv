@@ -1,0 +1,4 @@
+experiment_id,dataset_version,git_commit,timestamp,strategy,total_chunks,indexing_time_ms,recall_at_1,recall_at_3,recall_at_5,mrr,ndcg_at_5,avg_retrieval_latency_ms,avg_context_chars_top5,reproduction_command
+EXP-01B-CHUNKING-STRATEGIES,v1.0.0,0d6f572,2026-11-12T23:52:53.442729,Fixed Sliding Window (500/50),117,0.17,0.72,0.87,0.91,0.8307,0.8382,2.661,2052.8,python evaluation/experiments/exp01b_chunking_strategies.py
+EXP-01B-CHUNKING-STRATEGIES,v1.0.0,0d6f572,2026-11-12T23:52:53.442729,Sentence-Aware Splitting (500),103,1.16,0.76,0.86,0.94,0.8573,0.8689,2.248,1962.6,python evaluation/experiments/exp01b_chunking_strategies.py
+EXP-01B-CHUNKING-STRATEGIES,v1.0.0,0d6f572,2026-11-12T23:52:53.442729,Structure-Aware Hierarchy (500),103,0.98,0.76,0.86,0.94,0.8573,0.8689,2.181,1962.6,python evaluation/experiments/exp01b_chunking_strategies.py

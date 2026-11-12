@@ -1,0 +1,4 @@
+experiment_id,dataset_version,git_commit,timestamp,configuration,candidate_pool_k,final_context_k,recall_at_5,mrr,ndcg_at_5,avg_retrieval_latency_ms,avg_reranking_latency_ms,avg_total_latency_ms,avg_context_chars_top5,reproduction_command
+EXP-03-RERANKING-DEPTH,v1.0.0,0d6f572,2026-11-12T23:52:54.578685,Direct Top-5 (No Rerank),5,5,0.98,0.8373,0.8628,3.366,0.0,3.366,2029.2,python evaluation/experiments/exp03_reranking_depth.py
+EXP-03-RERANKING-DEPTH,v1.0.0,0d6f572,2026-11-12T23:52:54.578685,Top-10 -> Rerank -> Top-5,10,5,0.93,0.8063,0.8309,3.036,0.4,3.436,2006.2,python evaluation/experiments/exp03_reranking_depth.py
+EXP-03-RERANKING-DEPTH,v1.0.0,0d6f572,2026-11-12T23:52:54.578685,Top-20 -> Rerank -> Top-5,20,5,0.89,0.7767,0.7986,3.354,0.779,4.132,1955.0,python evaluation/experiments/exp03_reranking_depth.py

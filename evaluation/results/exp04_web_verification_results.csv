@@ -1,0 +1,4 @@
+experiment_id,dataset_version,git_commit,timestamp,mode,strategy,temporal_accuracy,conflict_precision,conflict_recall,conflict_f1,avg_injected_noise_tokens_on_static,avg_latency_ms,reproduction_command
+EXP-04-WEB-VERIFICATION,v1.0.0,0d6f572,2026-11-12T23:52:55.204107,Mode A: Docs Only (No Web),none,1.0,0.0,0.0,0.0,0.0,2.59,python evaluation/experiments/exp04_web_verification.py
+EXP-04-WEB-VERIFICATION,v1.0.0,0d6f572,2026-11-12T23:52:55.204107,Mode B: Always Web Augmented,always,1.0,0.1667,1.0,0.2857,9.6,2.616,python evaluation/experiments/exp04_web_verification.py
+EXP-04-WEB-VERIFICATION,v1.0.0,0d6f572,2026-11-12T23:52:55.204107,Mode C: Adaptive Conditional,conditional,1.0,0.2857,1.0,0.4444,1.3,23.005,python evaluation/experiments/exp04_web_verification.py
