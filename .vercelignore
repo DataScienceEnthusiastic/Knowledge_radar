@@ -1,0 +1,23 @@
+# Development virtual environment and git
+.venv/
+.git/
+.github/
+.pytest_cache/
+__pycache__/
+*.pyc
+
+# Evaluation, tests, and documentation
+evaluation/
+tests/
+docs/
+example_extraction.py
+conftest.py
+*.md
+
+# Local scratch and database artifacts
+chroma_db/
+demo_output/
+scratch/
+*.sqlite3
+*.db
+*.log

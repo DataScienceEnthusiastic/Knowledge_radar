@@ -1,0 +1,4 @@
+-r requirements.txt
+pdfplumber>=0.10.0
+chromadb>=0.4.22
+pytest>=8.0.0

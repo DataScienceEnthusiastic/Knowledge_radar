@@ -321,11 +321,13 @@ async def get_session(session_id: str):
 
 TEMPLATE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates", "index.html")
 
-@app.get("/", response_class=FileResponse)
+@app.get("/", response_class=HTMLResponse)
 async def get_dashboard():
     if not os.path.exists(TEMPLATE_PATH):
         raise HTTPException(status_code=500, detail="Dashboard template not found.")
-    return FileResponse(TEMPLATE_PATH, media_type="text/html")
+    with open(TEMPLATE_PATH, "r", encoding="utf-8") as f:
+        html_content = f.read()
+    return HTMLResponse(content=html_content)
 
 
 if __name__ == "__main__":
