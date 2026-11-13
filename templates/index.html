@@ -1382,6 +1382,77 @@
         let currentSessionId = localStorage.getItem('kr_session_id') || Math.random().toString(36).substring(2, 14);
         localStorage.setItem('kr_session_id', currentSessionId);
         let sessionAuditLog = [];
+        let ingestedFileSignatures = new Set();
+
+        /* Resilient Fetch Wrapper (Catches 413 Payload Too Large, 504 Timeouts, and parses JSON safely) */
+        async function safeFetchJson(url, options = {}) {
+            const res = await fetch(url, options);
+            const contentType = res.headers.get("content-type") || "";
+            if (!res.ok) {
+                const text = await res.text();
+                if (res.status === 413 || text.includes("Request Entity Too Large") || text.includes("FUNCTION_PAYLOAD_TOO_LARGE") || text.includes("Payload Too Large")) {
+                    throw new Error("Upload payload exceeded Vercel's 4.5 MB serverless limit. Knowledge Radar will automatically compress or index inputs sequentially.");
+                }
+                if (res.status === 504 || text.includes("GATEWAY_TIMEOUT") || text.includes("Gateway Timeout")) {
+                    throw new Error("Execution timed out (Vercel 60s limit). Please try a shorter query or fewer simultaneous sources.");
+                }
+                let detail = text;
+                try {
+                    const parsed = JSON.parse(text);
+                    detail = parsed.detail || parsed.message || text;
+                } catch {}
+                throw new Error(detail || `Server returned HTTP ${res.status}`);
+            }
+            if (contentType.includes("application/json")) {
+                return await res.json();
+            }
+            const text = await res.text();
+            try {
+                return JSON.parse(text);
+            } catch {
+                return { detail: text };
+            }
+        }
+
+        /* Client-Side Image Compression for OCR/Vision (Reduces multi-megabyte photos to ~250KB JPEG) */
+        async function compressImageIfNeeded(file, maxDimension = 1600, quality = 0.82) {
+            if (!file || !file.type.startsWith('image/')) return file;
+            if (file.size < 400 * 1024) return file;
+            return new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    const img = new Image();
+                    img.onload = () => {
+                        let { width, height } = img;
+                        if (width > maxDimension || height > maxDimension) {
+                            if (width > height) {
+                                height = Math.round((height * maxDimension) / width);
+                                width = maxDimension;
+                            } else {
+                                width = Math.round((width * maxDimension) / height);
+                                height = maxDimension;
+                            }
+                        }
+                        const canvas = document.createElement('canvas');
+                        canvas.width = width;
+                        canvas.height = height;
+                        const ctx = canvas.getContext('2d');
+                        ctx.drawImage(img, 0, 0, width, height);
+                        canvas.toBlob((blob) => {
+                            if (!blob || blob.size >= file.size) {
+                                resolve(file);
+                            } else {
+                                resolve(new File([blob], file.name.replace(/\.[^.]+$/, '.jpg'), { type: 'image/jpeg' }));
+                            }
+                        }, 'image/jpeg', quality);
+                    };
+                    img.onerror = () => resolve(file);
+                    img.src = e.target.result;
+                };
+                reader.onerror = () => resolve(file);
+                reader.readAsDataURL(file);
+            });
+        }
 
         window.onload = function() {
             document.getElementById('ribbonSessionId').innerText = `#${currentSessionId.substring(0, 8)}`;
@@ -1542,8 +1613,7 @@
 
         async function fetchStatus() {
             try {
-                const res = await fetch('/api/status');
-                const data = await res.json();
+                const data = await safeFetchJson('/api/status');
 
                 const box = document.getElementById('ollamaStatusBox');
                 if (data.ollama_online) {
@@ -1558,7 +1628,7 @@
                     box.innerHTML = `<span>☁️</span> Cloud Engine`;
                 }
 
-                document.getElementById('vectorCountText').innerText = data.vector_count;
+                document.getElementById('vectorCountText').innerText = data.vector_count !== undefined ? data.vector_count : (data.total_chunks || 0);
                 if (data.sources_summary) renderSourcesSummary(data.sources_summary);
             } catch (e) {
                 console.error("Error fetching status:", e);
@@ -1581,8 +1651,7 @@
             formData.append('cloud_api_key', key);
 
             try {
-                const res = await fetch('/api/test_cloud', { method: 'POST', body: formData });
-                const data = await res.json();
+                const data = await safeFetchJson('/api/test_cloud', { method: 'POST', body: formData });
                 if (data.success) {
                     toasts.innerHTML = `<div class="toast-item" style="color:#34D399;">🟢 ${escapeHtml(data.detail)}</div>`;
                 } else {
@@ -1599,48 +1668,92 @@
             const ytInput = document.getElementById('ytInput');
             const webInput = document.getElementById('webInput');
             const btnIndex = document.getElementById('btnIndex');
+            const toasts = document.getElementById('indexToasts');
 
-            const pdfFile = pdfInput.files[0];
-            const imgFile = imgInput.files[0];
+            let pdfFile = pdfInput.files[0];
+            let imgFile = imgInput.files[0];
             const ytUrl = ytInput.value.trim();
             const webUrl = webInput.value.trim();
-
-            const toasts = document.getElementById('indexToasts');
 
             if (!pdfFile && !imgFile && !ytUrl && !webUrl) {
                 toasts.innerHTML = '<div class="toast-item" style="color:#F59E0B;">⚠️ Please select a file or enter a link first.</div>';
                 return;
             }
 
-            const formData = new FormData();
-            if (pdfFile) formData.append('pdf_file', pdfFile);
-            if (imgFile) formData.append('img_file', imgFile);
-            if (ytUrl) formData.append('yt_url', ytUrl);
-            if (webUrl) formData.append('web_url', webUrl);
+            if (pdfFile && pdfFile.size > 4.2 * 1024 * 1024) {
+                toasts.innerHTML = `<div class="toast-item" style="color:#F87171;">🔴 PDF file is ${(pdfFile.size / (1024*1024)).toFixed(1)} MB. Vercel serverless functions cap uploads at 4.5 MB. Please select a PDF under 4.2 MB.</div>`;
+                return;
+            }
 
             btnIndex.disabled = true;
             btnIndex.innerHTML = '<span class="spinner"></span> Ingesting...';
-            toasts.innerHTML = '<div class="toast-item" style="color:var(--accent-primary);">⚡ Parsing & generating embeddings...</div>';
+            toasts.innerHTML = '<div class="toast-item" style="color:var(--accent-primary);">⚡ Parsing & indexing sources...</div>';
+
+            let totalAdded = 0;
+            let allMessages = [];
+            let latestSummary = null;
+            let latestCount = parseInt(document.getElementById('vectorCountText').innerText || "0");
 
             try {
-                const res = await fetch('/api/index', { method: 'POST', body: formData });
-                const data = await res.json();
+                // 1. Ingest PDF independently
+                if (pdfFile) {
+                    toasts.innerHTML = `<div class="toast-item" style="color:var(--accent-primary);">⚡ Parsing PDF: ${escapeHtml(pdfFile.name)} (${(pdfFile.size/1024).toFixed(0)} KB)...</div>`;
+                    const fd = new FormData();
+                    fd.append('pdf_file', pdfFile);
+                    const data = await safeFetchJson('/api/index', { method: 'POST', body: fd });
+                    totalAdded += (data.added || 0);
+                    if (data.messages) allMessages.push(...data.messages);
+                    if (data.sources_summary) latestSummary = data.sources_summary;
+                    if (data.total_count !== undefined) latestCount = data.total_count;
+                    ingestedFileSignatures.add(`pdf_${pdfFile.name}_${pdfFile.size}`);
+                }
+
+                // 2. Ingest Image independently (with auto-compression)
+                if (imgFile) {
+                    toasts.innerHTML += `<div class="toast-item" style="color:var(--accent-primary);">⚡ Compressing & OCRing Image: ${escapeHtml(imgFile.name)}...</div>`;
+                    const compressed = await compressImageIfNeeded(imgFile);
+                    if (compressed.size > 4.2 * 1024 * 1024) {
+                        throw new Error(`Image is ${(compressed.size / (1024*1024)).toFixed(1)} MB, exceeding Vercel's 4.5 MB limit.`);
+                    }
+                    const fd = new FormData();
+                    fd.append('img_file', compressed);
+                    const data = await safeFetchJson('/api/index', { method: 'POST', body: fd });
+                    totalAdded += (data.added || 0);
+                    if (data.messages) allMessages.push(...data.messages);
+                    if (data.sources_summary) latestSummary = data.sources_summary;
+                    if (data.total_count !== undefined) latestCount = data.total_count;
+                    ingestedFileSignatures.add(`img_${imgFile.name}_${imgFile.size}`);
+                }
+
+                // 3. Ingest YouTube & Web URLs
+                if (ytUrl || webUrl) {
+                    toasts.innerHTML += `<div class="toast-item" style="color:var(--accent-primary);">⚡ Fetching Web & YouTube transcripts...</div>`;
+                    const fd = new FormData();
+                    if (ytUrl) fd.append('yt_url', ytUrl);
+                    if (webUrl) fd.append('web_url', webUrl);
+                    const data = await safeFetchJson('/api/index', { method: 'POST', body: fd });
+                    totalAdded += (data.added || 0);
+                    if (data.messages) allMessages.push(...data.messages);
+                    if (data.sources_summary) latestSummary = data.sources_summary;
+                    if (data.total_count !== undefined) latestCount = data.total_count;
+                }
 
                 toasts.innerHTML = '';
-                if (data.added > 0) {
-                    toasts.innerHTML += `<div class="toast-item">✅ Indexed ${data.added} new chunks into Vault!</div>`;
+                if (totalAdded > 0) {
+                    toasts.innerHTML += `<div class="toast-item">✅ Indexed ${totalAdded} new chunks into Vault!</div>`;
                 }
-                (data.messages || []).forEach(m => {
+                allMessages.forEach(m => {
                     toasts.innerHTML += `<div class="toast-item">✓ ${escapeHtml(m)}</div>`;
                 });
-                if (data.added === 0 && (!data.messages || data.messages.length === 0)) {
+                if (totalAdded === 0 && allMessages.length === 0) {
                     toasts.innerHTML = '<div class="toast-item" style="color:var(--text-muted);">ℹ️ Inputs are already indexed.</div>';
                 }
 
-                document.getElementById('vectorCountText').innerText = data.total_count;
-                if (data.sources_summary) renderSourcesSummary(data.sources_summary);
+                document.getElementById('vectorCountText').innerText = latestCount;
+                if (latestSummary) renderSourcesSummary(latestSummary);
+
             } catch (e) {
-                toasts.innerHTML = `<div class="toast-item" style="color:#F87171;">🔴 Indexing Error: ${e.message}</div>`;
+                toasts.innerHTML = `<div class="toast-item" style="color:#F87171;">🔴 Indexing Error: ${escapeHtml(e.message)}</div>`;
             } finally {
                 btnIndex.disabled = false;
                 btnIndex.innerHTML = '<span>⚡</span> Ingest & Index Input';
@@ -1650,10 +1763,10 @@
         async function clearVectorStore() {
             if (!confirm("Are you sure you want to clear the entire Vault index?")) return;
             try {
-                const res = await fetch('/api/clear', { method: 'POST' });
-                const data = await res.json();
+                const data = await safeFetchJson('/api/clear', { method: 'POST' });
                 document.getElementById('vectorCountText').innerText = data.total_count;
                 document.getElementById('indexToasts').innerHTML = '<div class="toast-item">Cleared Vault index.</div>';
+                ingestedFileSignatures.clear();
                 renderSourcesSummary({});
             } catch (e) {
                 alert("Error clearing vector store: " + e.message);
@@ -1664,7 +1777,7 @@
             try {
                 const formData = new FormData();
                 formData.append('session_id', currentSessionId);
-                await fetch('/api/session/reset', { method: 'POST', body: formData });
+                await safeFetchJson('/api/session/reset', { method: 'POST', body: formData });
             } catch (e) {
                 console.error("Session reset error:", e);
             }
@@ -1789,8 +1902,30 @@
 
             const pdfInput = document.getElementById('pdfInput');
             const imgInput = document.getElementById('imgInput');
-            if (pdfInput.files[0]) formData.append('pdf_file', pdfInput.files[0]);
-            if (imgInput.files[0]) formData.append('img_file', imgInput.files[0]);
+            let pdfFile = pdfInput.files[0];
+            let imgFile = imgInput.files[0];
+
+            // Prevent 413 Payload Too Large: avoid re-uploading multi-megabyte files repeatedly
+            const pdfSig = pdfFile ? `pdf_${pdfFile.name}_${pdfFile.size}` : null;
+            const imgSig = imgFile ? `img_${imgFile.name}_${imgFile.size}` : null;
+
+            const needsPdf = pdfFile && !ingestedFileSignatures.has(pdfSig);
+            const needsImg = imgFile && !ingestedFileSignatures.has(imgSig);
+
+            if (needsPdf || needsImg) {
+                const combinedSize = (pdfFile ? pdfFile.size : 0) + (imgFile ? imgFile.size : 0);
+                if (combinedSize > 3.5 * 1024 * 1024 || (pdfFile && imgFile)) {
+                    setProgressStep("⚡ Ingesting vault inputs sequentially before audit query...");
+                    await indexVaultInputs();
+                } else {
+                    if (needsPdf) formData.append('pdf_file', pdfFile);
+                    if (needsImg) {
+                        const compressed = await compressImageIfNeeded(imgFile);
+                        formData.append('img_file', compressed);
+                    }
+                }
+            }
+
             formData.append('yt_url', document.getElementById('ytInput').value.trim());
             formData.append('web_url', document.getElementById('webInput').value.trim());
 
@@ -1798,8 +1933,7 @@
                 setTimeout(() => setProgressStep("🌐 Step 2: Probing time-sensitivity & verifying live web facts..."), 1000);
                 setTimeout(() => setProgressStep("🤖 Step 3: Performing Multi-Source Synthesis & Grounding Audit..."), 2200);
 
-                const res = await fetch('/api/audit', { method: 'POST', body: formData });
-                const data = await res.json();
+                const data = await safeFetchJson('/api/audit', { method: 'POST', body: formData });
 
                 sessionAuditLog.push(data);
 
