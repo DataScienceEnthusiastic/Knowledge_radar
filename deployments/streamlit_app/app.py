@@ -448,17 +448,17 @@ if prompt:
     with st.chat_message("assistant"):
         with st.status("📡 Knowledge Radar Auditing...", expanded=True) as status:
             st.write("⚡ Step 1: Checking time-sensitivity and contextualizing memory...")
-            session_state = st.session_state.session_manager.get_or_create_session(st.session_state.session_id)
-            effective_query = prompt
+            session_state = st.session_state.session_manager.get_or_create(st.session_state.session_id)
+            effective_query = st.session_state.session_manager.contextualize_query(prompt, st.session_state.session_id)
 
-            is_time_sensitive = is_time_sensitive_local(prompt)
+            is_time_sensitive = is_time_sensitive_local(effective_query, OLLAMA_BASE_URL, LOCAL_MODEL_NAME)
 
             # Web Search
             web_context = []
             web_start = time.time()
             if is_time_sensitive:
                 st.write("🌐 Step 2: Query flagged as time-sensitive. Fetching live web verification context...")
-                web_context = fetch_live_web_context(prompt)
+                web_context = fetch_live_web_context(effective_query, max_results=2)
             else:
                 st.write("🌐 Step 2: Time-sensitivity check: Internal vault focus.")
             web_latency_ms = round((time.time() - web_start) * 1000, 2)
@@ -477,17 +477,19 @@ if prompt:
             base_url = getattr(st.session_state, "base_url", GEMINI_BASE_URL)
             model_name = getattr(st.session_state, "model_name", "gemini-2.0-flash")
             api_key = getattr(st.session_state, "api_key", "")
-            gemini_tier = getattr(st.session_state, "gemini_tier", "medium")
+            chat_history = st.session_state.session_manager.get_recent_history(st.session_state.session_id, max_turns=3)
 
-            response_text, telemetry = generate_response(
-                query=effective_query,
+            response_text, provider_badge, telemetry = generate_response(
+                query=prompt,
                 doc_context=doc_context,
                 web_context=web_context,
-                conversation_turns=session_state.turns,
-                cloud_base_url=base_url if provider != "Local Ollama" else None,
-                cloud_model=model_name if provider != "Local Ollama" else None,
+                is_time_sensitive=is_time_sensitive,
                 cloud_api_key=api_key,
-                gemini_tier=gemini_tier
+                cloud_base_url=base_url,
+                cloud_model=model_name,
+                ollama_base_url=OLLAMA_BASE_URL,
+                local_model=LOCAL_MODEL_NAME,
+                chat_history=chat_history
             )
 
             # Grounding & Turn Evaluation
@@ -498,29 +500,21 @@ if prompt:
                 doc_context=doc_context,
                 web_context=web_context,
                 telemetry=telemetry,
-                session_history_faithfulness=session_state.faithfulness_history,
                 retrieval_latency_ms=retrieval_latency_ms,
-                web_latency_ms=web_latency_ms
+                web_latency_ms=web_latency_ms,
+                session_history_faithfulness=session_state.running_faithfulness
             )
 
             # Record turn in session manager
-            st.session_state.session_manager.record_turn(
+            st.session_state.session_manager.add_turn(
                 session_id=st.session_state.session_id,
-                user_query=prompt,
+                query=prompt,
                 effective_query=effective_query,
                 synthesis=response_text,
                 metrics=turn_eval["metrics"]
             )
 
             status.update(label="✅ Audit Complete!", state="complete", expanded=False)
-
-        # Provider Badge
-        if provider == "Google Gemini":
-            provider_badge = f"Google Gemini ({model_name})"
-        elif provider == "Local Ollama":
-            provider_badge = f"Ollama ({model_name})"
-        else:
-            provider_badge = f"{provider} ({model_name})"
 
         # Display Response
         total_tokens = telemetry.get("total_tokens", 0)

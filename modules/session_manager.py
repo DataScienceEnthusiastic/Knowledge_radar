@@ -34,6 +34,11 @@ class SessionState:
     running_faithfulness: List[float] = field(default_factory=list)
     indexed_signatures: Set[str] = field(default_factory=set)
 
+    @property
+    def faithfulness_history(self) -> List[float]:
+        """Backward compatibility alias for running_faithfulness."""
+        return self.running_faithfulness
+
 
 class SessionManager:
     """
@@ -116,6 +121,10 @@ class SessionManager:
             state.running_faithfulness.append(float(faithfulness))
 
         return state
+
+    # Backward compatibility aliases
+    get_or_create_session = get_or_create
+    record_turn = add_turn
 
     def get_recent_history(
         self, session_id: str, max_turns: int = 3
