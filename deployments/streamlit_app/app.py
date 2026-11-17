@@ -384,33 +384,53 @@ for msg in st.session_state.messages:
             st.markdown(msg["content"])
 
             # Collapsible Audit Drawer
-            claims_audit = msg.get("claims_audit", [])
+            claims_audit = msg.get("claims_audit", {})
             doc_context = msg.get("doc_context", [])
             web_context = msg.get("web_context", [])
             latencies = msg.get("latencies", {})
 
-            with st.expander(f"🔍 Inspect Evidence & Claim Audit ({len(doc_context)} chunks, {len(claims_audit)} claims)"):
+            raw_claims = claims_audit.get("claims", []) if isinstance(claims_audit, dict) else (claims_audit if isinstance(claims_audit, list) else [])
+            claims_count = len(raw_claims)
+
+            with st.expander(f"🔍 Inspect Evidence & Claim Audit ({len(doc_context)} chunks, {claims_count} claims)"):
                 tab_claims, tab_docs, tab_web, tab_telemetry = st.tabs([
-                    f"Claim Audit ({len(claims_audit)})",
+                    f"Claim Audit ({claims_count})",
                     f"Document Chunks ({len(doc_context)})",
                     f"Web Verification ({len(web_context)})",
                     "Latency & Math"
                 ])
 
                 with tab_claims:
-                    if claims_audit:
-                        for idx, c in enumerate(claims_audit, start=1):
-                            status_badge = "🟢 Grounded" if c["status"] == "GROUNDED" else ("🟡 Partial" if c["status"] == "PARTIAL" else "🔴 Unverified")
-                            st.markdown(f"**#{idx} [{status_badge}]** `{c.get('match_score', 0):.0%}` — {c.get('claim', '')}")
-                            if c.get("matched_passage"):
-                                st.caption(f"↳ Evidence: \"{c['matched_passage']}\"")
+                    # Support both dict and list schemas from turn_eval["claims_audit"]
+                    raw_claims = claims_audit.get("claims", []) if isinstance(claims_audit, dict) else claims_audit
+                    if isinstance(raw_claims, list) and raw_claims:
+                        for idx, c in enumerate(raw_claims, start=1):
+                            if isinstance(c, dict):
+                                status_str = str(c.get("status", "UNVERIFIED")).upper()
+                                if "GROUNDED" in status_str:
+                                    status_badge = "🟢 Grounded"
+                                elif "PARTIAL" in status_str:
+                                    status_badge = "🟡 Partial"
+                                else:
+                                    status_badge = "🔴 Unverified"
+
+                                conf = c.get("confidence", c.get("match_score", 0.0))
+                                claim_text = c.get("text", c.get("claim", ""))
+                                supporting = c.get("supporting_source", c.get("matched_passage", ""))
+
+                                st.markdown(f"**#{idx} [{status_badge}]** `{float(conf):.0%}` — {claim_text}")
+                                if supporting:
+                                    st.caption(f"↳ Evidence: \"{supporting}\"")
+                            else:
+                                st.markdown(f"**#{idx}** {str(c)}")
                     else:
                         st.caption("No discrete factual assertions detected.")
 
                 with tab_docs:
                     if doc_context:
                         for d in doc_context:
-                            st.markdown(f"**{d.get('source', 'Vault')}** (Score: `{d.get('similarity', 0):.3f}`)")
+                            sim = d.get("score", d.get("similarity", 0.0))
+                            st.markdown(f"**{d.get('source', 'Vault')}** (Score: `{float(sim):.3f}`)")
                             st.info(d.get("text", ""))
                     else:
                         st.caption("No internal documents retrieved.")
@@ -466,8 +486,10 @@ if prompt:
             # Document Retrieval
             st.write("🔍 Step 3: Searching Document Vault across active sources...")
             retrieval_start = time.time()
-            active_sources_count = len(st.session_state.vector_store.get_sources_summary())
-            effective_top_k = max(DEFAULT_TOP_K, min(12, active_sources_count * 4))
+            active_sources = st.session_state.vector_store.get_sources_summary()
+            active_sources_count = len(active_sources)
+            # Dynamic retrieval budget: Ensure at least 3 chunks per active modality/document up to 24 chunks
+            effective_top_k = max(DEFAULT_TOP_K, min(24, max(active_sources_count * 3, 10)))
             doc_context = st.session_state.vector_store.search_chunks(effective_query, top_k=effective_top_k)
             retrieval_latency_ms = round((time.time() - retrieval_start) * 1000, 2)
 

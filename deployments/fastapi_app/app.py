@@ -241,8 +241,9 @@ async def run_audit(
 
     # 5. Retrieve Document Context from ChromaDB with latency timing
     t_ret_0 = time.perf_counter()
-    active_sources_count = len(vector_store.get_sources_summary())
-    effective_top_k = max(DEFAULT_TOP_K, min(12, active_sources_count * 4))
+    active_sources = vector_store.get_sources_summary()
+    active_sources_count = len(active_sources)
+    effective_top_k = max(DEFAULT_TOP_K, min(24, max(active_sources_count * 3, 10)))
     doc_context = vector_store.search_chunks(effective_query, top_k=effective_top_k)
     retrieval_latency_ms = (time.perf_counter() - t_ret_0) * 1000.0
 
