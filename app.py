@@ -26,7 +26,7 @@ from modules.llm_router import check_ollama_online, is_time_sensitive_local, gen
 from modules.session_manager import SessionManager
 from modules.turn_evaluator import evaluate_turn
 
-app = FastAPI(title="Knowledge Radar API", version="2.5.0")
+app = FastAPI(title="Knowledge Radar API", version="1.0.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -35,24 +35,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-
-@app.middleware("http")
-async def normalize_vercel_paths(request, call_next):
-    """
-    Normalizes Vercel serverless rewritten paths.
-    Strips internal execution endpoints (/api/index.py, /app.py, /api)
-    so standard FastAPI routes match cleanly without 404 errors.
-    """
-    path = request.scope.get("path", "")
-    for prefix in ("/app.py", "/api/index.py"):
-        if path == prefix:
-            request.scope["path"] = "/"
-            break
-        elif path.startswith(prefix + "/"):
-            request.scope["path"] = path[len(prefix):]
-            break
-    return await call_next(request)
 
 # Global singleton vector store and conversational session manager
 vector_store = KnowledgeVectorStore()
@@ -340,9 +322,6 @@ async def get_session(session_id: str):
 TEMPLATE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "templates", "index.html")
 
 @app.get("/", response_class=HTMLResponse)
-@app.get("/app.py", response_class=HTMLResponse)
-@app.get("/api/index.py", response_class=HTMLResponse)
-@app.get("/api", response_class=HTMLResponse)
 async def get_dashboard():
     if not os.path.exists(TEMPLATE_PATH):
         raise HTTPException(status_code=500, detail="Dashboard template not found.")

@@ -1391,10 +1391,10 @@
             if (!res.ok) {
                 const text = await res.text();
                 if (res.status === 413 || text.includes("Request Entity Too Large") || text.includes("FUNCTION_PAYLOAD_TOO_LARGE") || text.includes("Payload Too Large")) {
-                    throw new Error("Upload payload exceeded Vercel's 4.5 MB serverless limit. Knowledge Radar will automatically compress or index inputs sequentially.");
+                    throw new Error("Upload payload too large. Please upload files individually or use smaller files.");
                 }
                 if (res.status === 504 || text.includes("GATEWAY_TIMEOUT") || text.includes("Gateway Timeout")) {
-                    throw new Error("Execution timed out (Vercel 60s limit). Please try a shorter query or fewer simultaneous sources.");
+                    throw new Error("Execution timed out. Please try a shorter query or fewer simultaneous sources.");
                 }
                 let detail = text;
                 try {
@@ -1680,11 +1680,6 @@
                 return;
             }
 
-            if (pdfFile && pdfFile.size > 4.2 * 1024 * 1024) {
-                toasts.innerHTML = `<div class="toast-item" style="color:#F87171;">🔴 PDF file is ${(pdfFile.size / (1024*1024)).toFixed(1)} MB. Vercel serverless functions cap uploads at 4.5 MB. Please select a PDF under 4.2 MB.</div>`;
-                return;
-            }
-
             btnIndex.disabled = true;
             btnIndex.innerHTML = '<span class="spinner"></span> Ingesting...';
             toasts.innerHTML = '<div class="toast-item" style="color:var(--accent-primary);">⚡ Parsing & indexing sources...</div>';
@@ -1710,11 +1705,8 @@
 
                 // 2. Ingest Image independently (with auto-compression)
                 if (imgFile) {
-                    toasts.innerHTML += `<div class="toast-item" style="color:var(--accent-primary);">⚡ Compressing & OCRing Image: ${escapeHtml(imgFile.name)}...</div>`;
+                    toasts.innerHTML += `<div class="toast-item" style="color:var(--accent-primary);">⚡ Processing image: ${escapeHtml(imgFile.name)}...</div>`;
                     const compressed = await compressImageIfNeeded(imgFile);
-                    if (compressed.size > 4.2 * 1024 * 1024) {
-                        throw new Error(`Image is ${(compressed.size / (1024*1024)).toFixed(1)} MB, exceeding Vercel's 4.5 MB limit.`);
-                    }
                     const fd = new FormData();
                     fd.append('img_file', compressed);
                     const data = await safeFetchJson('/api/index', { method: 'POST', body: fd });

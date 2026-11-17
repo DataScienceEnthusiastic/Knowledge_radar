@@ -139,11 +139,32 @@ python evaluation/experiments/run_all.py
 ```
 *Executes `EXP-00` through `EXP-06B`, regenerates all raw CSV files in `evaluation/results/`, and renders decision-oriented figures in `evaluation/plots/`.*
 
-### 4. Launch the Conversational Dashboard
+### 4. Running the Application (Two Independent Deployments)
+
+Knowledge Radar is decoupled into two separate interfaces sharing the exact same core engine:
+
+#### Option A: FastAPI + Executive HTML Dashboard (Localhost)
+Runs the full asynchronous FastAPI backend with custom dark-mode executive UI:
 ```powershell
-python app.py
+python deployments/fastapi_app/run.py
+# Or: uvicorn deployments.fastapi_app.app:app --reload
 ```
 *Open [http://127.0.0.1:8000](http://127.0.0.1:8000) in your browser.*
+
+#### Option B: Streamlit App (Localhost & 1-Click Streamlit Cloud)
+Runs the native interactive Streamlit app:
+```powershell
+python deployments/streamlit_app/run.py
+# Or: streamlit run deployments/streamlit_app/app.py
+```
+*Open [http://localhost:8501](http://localhost:8501) in your browser.*
+
+**To Deploy on Streamlit Community Cloud (Free 5 GB RAM, No Cost):**
+1. Push this repository to your GitHub.
+2. Go to [share.streamlit.io](https://share.streamlit.io) and click **"New app"**.
+3. Select your repository: `DataScienceEnthusiastic/Knowledge_radar`, Branch: `main`.
+4. Set **Main file path** to: `deployments/streamlit_app/app.py`.
+5. Click **Deploy!** Your app will be live with a permanent public HTTPS URL.
 
 ---
 
