@@ -249,32 +249,56 @@ with st.sidebar:
         provider = st.selectbox("Provider", ["Google Gemini", "OpenRouter", "NVIDIA NIM", "Local Ollama"])
 
         if provider == "Google Gemini":
-            gemini_tier = st.select_slider(
-                "Gemini Speed vs. Reasoning Tier",
-                options=["low", "medium", "high"],
-                value="medium",
-                format_func=lambda x: {
-                    "low": "⚡ Low (2.0 Flash-Lite)",
-                    "medium": "⚖️ Medium (2.0 Flash)",
-                    "high": "🧠 High (1.5 Pro)"
-                }[x]
+            gemini_mode = st.radio(
+                "Model Selection Mode",
+                ["Preset Tiers", "Custom Model Name"],
+                horizontal=True
             )
-            model_name = GEMINI_MODELS[gemini_tier]
+            if gemini_mode == "Preset Tiers":
+                gemini_tier = st.select_slider(
+                    "Gemini Speed vs. Reasoning Tier",
+                    options=["low", "medium", "high"],
+                    value="medium",
+                    format_func=lambda x: {
+                        "low": "⚡ Low (2.0 Flash-Lite)",
+                        "medium": "⚖️ Medium (2.0 Flash)",
+                        "high": "🧠 High (1.5 Pro)"
+                    }[x]
+                )
+                model_name = GEMINI_MODELS[gemini_tier]
+            else:
+                gemini_tier = "custom"
+                model_name = st.text_input(
+                    "Gemini Model ID",
+                    value="gemini-2.0-flash",
+                    help="E.g. gemini-2.0-flash, gemini-1.5-pro, gemini-2.0-flash-lite, gemini-2.5-pro"
+                ).strip()
             base_url = GEMINI_BASE_URL
             api_key = st.text_input("Gemini API Key (Google AI Studio)", type="password", placeholder="AIzaSy...")
+
         elif provider == "OpenRouter":
             gemini_tier = "medium"
-            model_name = st.text_input("Model ID", value="meta-llama/llama-3.3-70b-instruct:free")
+            model_name = st.text_input(
+                "Model ID",
+                value="meta-llama/llama-3.3-70b-instruct:free",
+                help="Any valid OpenRouter model slug (e.g. deepseek/deepseek-r1, anthropic/claude-3.5-sonnet)"
+            ).strip()
             base_url = OPENROUTER_BASE_URL
             api_key = st.text_input("OpenRouter API Key", type="password", placeholder="sk-or-v1-...")
+
         elif provider == "NVIDIA NIM":
             gemini_tier = "medium"
-            model_name = st.text_input("Model ID", value="meta/llama-3.3-70b-instruct")
+            model_name = st.text_input(
+                "Model ID",
+                value="meta/llama-3.3-70b-instruct",
+                help="NVIDIA NIM model ID (e.g. meta/llama-3.3-70b-instruct, deepseek-ai/deepseek-r1)"
+            ).strip()
             base_url = NVIDIA_NIM_BASE_URL
             api_key = st.text_input("NVIDIA API Key", type="password", placeholder="nvapi-...")
+
         else:
             gemini_tier = "medium"
-            model_name = st.text_input("Ollama Model", value=LOCAL_MODEL_NAME)
+            model_name = st.text_input("Ollama Model", value=LOCAL_MODEL_NAME).strip()
             base_url = OLLAMA_BASE_URL
             api_key = ""
 
@@ -284,13 +308,28 @@ with st.sidebar:
         st.session_state.api_key = api_key
         st.session_state.gemini_tier = gemini_tier
 
-        if api_key and st.button("🔌 Test Cloud Connection", use_container_width=True):
-            with st.spinner("Testing endpoint..."):
-                conn = test_cloud_connection(base_url, model_name, api_key)
-                if conn.get("success"):
-                    st.success(conn.get("detail", "Connected successfully!"))
+        # Test Connection button for Cloud & Local Ollama
+        if provider == "Local Ollama":
+            if st.button("🔌 Test Ollama Connection", use_container_width=True):
+                with st.spinner(f"Pinging Ollama at {base_url}..."):
+                    is_online = check_ollama_online(base_url)
+                    if is_online:
+                        st.success(f"Ollama is reachable at {base_url}! Model: {model_name}")
+                    else:
+                        st.error(f"Cannot reach Ollama at {base_url}. Ensure 'ollama serve' is running.")
+        else:
+            if st.button("🔌 Test Model Connection", use_container_width=True):
+                if not api_key or not api_key.strip():
+                    st.warning("Please enter your API Key to test the connection.")
+                elif not model_name:
+                    st.warning("Please specify a valid model name.")
                 else:
-                    st.error(conn.get("detail", "Connection failed."))
+                    with st.spinner(f"Testing connection with model '{model_name}'..."):
+                        is_ok, detail = test_cloud_connection(base_url, model_name, api_key)
+                        if is_ok:
+                            st.success(detail)
+                        else:
+                            st.error(detail)
 
 
 # -----------------------------------------------------------------------------
