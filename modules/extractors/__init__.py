@@ -101,6 +101,18 @@ def extract_many(
     return [extract_source(src, options=options) for src in sources]
 
 
+from modules.extractors.parser import (
+    parse_pdf,
+    parse_youtube,
+    parse_url,
+    parse_image,
+    chunk_text,
+    chunk_sentences,
+    extract_structured,
+    extract_structure_chunks,
+)
+
+
 __all__ = [
     "BaseExtractor",
     "BoundingBox",
@@ -132,4 +144,12 @@ __all__ = [
     "store_in_sqlite",
     "extract_source",
     "extract_many",
+    "parse_pdf",
+    "parse_youtube",
+    "parse_url",
+    "parse_image",
+    "chunk_text",
+    "chunk_sentences",
+    "extract_structured",
+    "extract_structure_chunks",
 ]
